@@ -30,7 +30,7 @@ from ansible.module_utils.six.moves.urllib.parse import urlsplit
 try:
     from library.module_utils.network.f5.common import f5_provider_spec
 except Exception:
-    from ansible.module_utils.network.f5.common import f5_provider_spec
+    from ansible_collections.f5networks.f5_modules.module_utils.common import f5_provider_spec
 
 from ansible.utils.display import Display
 display = Display()

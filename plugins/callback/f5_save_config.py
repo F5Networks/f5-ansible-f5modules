@@ -63,7 +63,6 @@ DOCUMENTATION = '''
 '''
 
 import json
-import os
 
 try:
     from __main__ import cli
@@ -81,21 +80,12 @@ try:
     from library.module_utils.network.f5.bigip import F5Client
     from library.module_utils.network.f5.common import F5ModuleError
     from library.module_utils.network.f5.common import cleanup_tokens
-    try:
-        from library.module_utils.network.f5.common import iControlUnexpectedHTTPError
-    except ImportError:
-        HAS_F5SDK = False
     HAS_DEVEL_IMPORTS = True
 except ImportError:
     # Upstream Ansible
-    from ansible.module_utils.network.f5.bigip import HAS_F5SDK
-    from ansible.module_utils.network.f5.bigip import F5Client
-    from ansible.module_utils.network.f5.common import F5ModuleError
-    from ansible.module_utils.network.f5.common import cleanup_tokens
-    try:
-        from ansible.module_utils.network.f5.common import iControlUnexpectedHTTPError
-    except ImportError:
-        HAS_F5SDK = False
+    from ansible_collections.f5networks.f5_modules.module_utils.bigip import F5Client
+    from ansible_collections.f5networks.f5_modules.module_utils.common import F5ModuleError
+    from ansible_collections.f5networks.f5_modules.module_utils.common import cleanup_tokens
 
 
 class CallbackModule(CallbackBase):
@@ -107,14 +97,7 @@ class CallbackModule(CallbackBase):
     CALLBACK_NEEDS_WHITELIST = True
 
     def __init__(self, display=None):
-
         super(CallbackModule, self).__init__(display=display)
-
-        if not HAS_F5SDK:
-            self.disabled = True
-            self._display.warning(
-                'The `f5-sdk` python module is not installed. Disabling the F5 Save Config callback plugin.')
-
         self.playbook_name = None
 
     def send_msg(self, attachments):
