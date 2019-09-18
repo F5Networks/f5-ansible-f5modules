@@ -109,7 +109,6 @@ options:
         remote device.
       - This module currently supports only connectivity to the device over cli (ssh).
     required: True
-    type: str
     choices:
         - cli
     default: cli
@@ -259,7 +258,7 @@ import ssl
 from datetime import datetime
 
 from ansible.module_utils.basic import AnsibleModule
-from ansible_collections.f5networks.f5_modules.module_utils.connection import exec_command
+from ansible_collections.F5Networks.f5_modules.plugins.module_utils.connection import exec_command
 
 
 try:
@@ -268,10 +267,10 @@ try:
     from library.module_utils.network.f5.common import f5_argument_spec
     from library.module_utils.network.f5.common import is_cli
 except ImportError:
-    from ansible_collections.f5networks.f5_modules.module_utils.common import F5ModuleError
-    from ansible_collections.f5networks.f5_modules.module_utils.common import AnsibleF5Parameters
-    from ansible_collections.f5networks.f5_modules.module_utils.common import f5_argument_spec
-    from ansible_collections.f5networks.f5_modules.module_utils.common import is_cli
+    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import F5ModuleError
+    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import AnsibleF5Parameters
+    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import f5_argument_spec
+    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import is_cli
 
 
 class Parameters(AnsibleF5Parameters):

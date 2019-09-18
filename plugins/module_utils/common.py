@@ -13,7 +13,7 @@ import datetime
 
 from ansible.module_utils._text import to_text
 from ansible.module_utils.basic import env_fallback
-from ansible_collections.f5networks.f5_modules.module_utils.connection import exec_command
+from ansible.module_utils.connection import exec_command
 from ansible.module_utils.network.common.utils import to_list
 from ansible.module_utils.network.common.utils import ComplexList
 from ansible.module_utils.six import iteritems

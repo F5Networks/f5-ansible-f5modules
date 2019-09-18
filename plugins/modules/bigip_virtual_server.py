@@ -899,25 +899,25 @@ try:
     from library.module_utils.network.f5.ipaddress import compress_address
     from library.module_utils.network.f5.icontrol import modules_provisioned
 except ImportError:
-    from ansible_collections.f5networks.f5_modules.module_utils.bigip import F5RestClient
-    from ansible_collections.f5networks.f5_modules.module_utils.common import MANAGED_BY_ANNOTATION_VERSION
-    from ansible_collections.f5networks.f5_modules.module_utils.common import MANAGED_BY_ANNOTATION_MODIFIED
-    from ansible_collections.f5networks.f5_modules.module_utils.common import F5ModuleError
-    from ansible_collections.f5networks.f5_modules.module_utils.common import AnsibleF5Parameters
-    from ansible_collections.f5networks.f5_modules.module_utils.common import fq_name
-    from ansible_collections.f5networks.f5_modules.module_utils.common import f5_argument_spec
-    from ansible_collections.f5networks.f5_modules.module_utils.common import transform_name
-    from ansible_collections.f5networks.f5_modules.module_utils.common import mark_managed_by
-    from ansible_collections.f5networks.f5_modules.module_utils.common import only_has_managed_metadata
-    from ansible_collections.f5networks.f5_modules.module_utils.common import flatten_boolean
-    from ansible_collections.f5networks.f5_modules.module_utils.compare import cmp_simple_list
-    from ansible_collections.f5networks.f5_modules.module_utils.ipaddress import is_valid_ip
-    from ansible_collections.f5networks.f5_modules.module_utils.ipaddress import is_valid_ip_interface
-    from ansible_collections.f5networks.f5_modules.module_utils.ipaddress import ip_interface
-    from ansible_collections.f5networks.f5_modules.module_utils.ipaddress import validate_ip_v6_address
-    from ansible_collections.f5networks.f5_modules.module_utils.ipaddress import get_netmask
-    from ansible_collections.f5networks.f5_modules.module_utils.ipaddress import compress_address
-    from ansible_collections.f5networks.f5_modules.module_utils.icontrol import modules_provisioned
+    from ansible_collections.f5networks.f5_modules.plugins.module_utils.bigip import F5RestClient
+    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import MANAGED_BY_ANNOTATION_VERSION
+    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import MANAGED_BY_ANNOTATION_MODIFIED
+    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import F5ModuleError
+    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import AnsibleF5Parameters
+    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import fq_name
+    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import f5_argument_spec
+    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import transform_name
+    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import mark_managed_by
+    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import only_has_managed_metadata
+    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import flatten_boolean
+    from ansible_collections.f5networks.f5_modules.plugins.module_utils.compare import cmp_simple_list
+    from ansible_collections.f5networks.f5_modules.plugins.module_utils.ipaddress import is_valid_ip
+    from ansible_collections.f5networks.f5_modules.plugins.module_utils.ipaddress import is_valid_ip_interface
+    from ansible_collections.f5networks.f5_modules.plugins.module_utils.ipaddress import ip_interface
+    from ansible_collections.f5networks.f5_modules.plugins.module_utils.ipaddress import validate_ip_v6_address
+    from ansible_collections.f5networks.f5_modules.plugins.module_utils.ipaddress import get_netmask
+    from ansible_collections.f5networks.f5_modules.plugins.module_utils.ipaddress import compress_address
+    from ansible_collections.f5networks.f5_modules.plugins.module_utils.icontrol import modules_provisioned
 
 
 class Parameters(AnsibleF5Parameters):

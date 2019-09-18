@@ -163,17 +163,17 @@ try:
     from library.module_utils.network.f5.compare import cmp_simple_list
     from library.module_utils.network.f5.icontrol import tmos_version
 except ImportError:
-    from ansible_collections.f5networks.f5_modules.module_utils.bigip import F5RestClient
-    from ansible_collections.f5networks.f5_modules.module_utils.common import F5ModuleError
-    from ansible_collections.f5networks.f5_modules.module_utils.common import AnsibleF5Parameters
-    from ansible_collections.f5networks.f5_modules.module_utils.common import fq_name
-    from ansible_collections.f5networks.f5_modules.module_utils.common import flatten_boolean
-    from ansible_collections.f5networks.f5_modules.module_utils.common import transform_name
-    from ansible_collections.f5networks.f5_modules.module_utils.common import f5_argument_spec
-    from ansible_collections.f5networks.f5_modules.module_utils.common import is_empty_list
-    from ansible_collections.f5networks.f5_modules.module_utils.compare import cmp_str_with_none
-    from ansible_collections.f5networks.f5_modules.module_utils.compare import cmp_simple_list
-    from ansible_collections.f5networks.f5_modules.module_utils.icontrol import tmos_version
+    from ansible_collections.f5networks.f5_modules.plugins.module_utils.bigip import F5RestClient
+    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import F5ModuleError
+    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import AnsibleF5Parameters
+    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import fq_name
+    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import flatten_boolean
+    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import transform_name
+    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import f5_argument_spec
+    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import is_empty_list
+    from ansible_collections.f5networks.f5_modules.plugins.module_utils.compare import cmp_str_with_none
+    from ansible_collections.f5networks.f5_modules.plugins.module_utils.compare import cmp_simple_list
+    from ansible_collections.f5networks.f5_modules.plugins.module_utils.icontrol import tmos_version
 
 
 class Parameters(AnsibleF5Parameters):
