@@ -314,9 +314,8 @@ try:
     from library.module_utils.network.f5.compare import cmp_str_with_none
     from library.module_utils.network.f5.compare import cmp_simple_list
     from library.module_utils.network.f5.compare import compare_complex_list
+    from library.module_utils.network.f5.icontrol import module_provisioned
     from library.module_utils.network.f5.ipaddress import ip_network
-    from library.module_utils.network.f5.ipaddress import is_valid_ip
-    from library.module_utils.network.f5.ipaddress import is_valid_ip_network
 except ImportError:
     from ansible_collections.f5networks.f5_modules.plugins.module_utils.bigip import F5RestClient
     from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import F5ModuleError
@@ -329,9 +328,8 @@ except ImportError:
     from ansible_collections.f5networks.f5_modules.plugins.module_utils.compare import cmp_str_with_none
     from ansible_collections.f5networks.f5_modules.plugins.module_utils.compare import cmp_simple_list
     from ansible_collections.f5networks.f5_modules.plugins.module_utils.compare import compare_complex_list
+    from ansible_collections.f5networks.f5_modules.plugins.module_utils.icontrol import module_provisioned
     from ansible_collections.f5networks.f5_modules.plugins.module_utils.ipaddress import ip_network
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.ipaddress import is_valid_ip
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.ipaddress import is_valid_ip_network
 
 
 class Parameters(AnsibleF5Parameters):
@@ -760,6 +758,10 @@ class ModuleManager(object):
             )
 
     def exec_module(self):
+        if not module_provisioned(self.client, 'apm'):
+            raise F5ModuleError(
+                "APM must be provisioned to use this module."
+            )
         changed = False
         result = dict()
         state = self.want.state

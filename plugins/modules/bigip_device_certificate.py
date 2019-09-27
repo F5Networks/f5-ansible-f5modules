@@ -109,6 +109,7 @@ options:
         remote device.
       - This module currently supports only connectivity to the device over cli (ssh).
     required: True
+    type: str
     choices:
         - cli
     default: cli
@@ -258,7 +259,11 @@ import ssl
 from datetime import datetime
 
 from ansible.module_utils.basic import AnsibleModule
-from ansible_collections.F5Networks.f5_modules.plugins.module_utils.connection import exec_command
+
+try:
+    from library.module_utils.network.f5.connection import exec_command
+except ImportError:
+    from ansible_collections.f5networks.f5_modules.plugins.module_utils.connection import exec_command
 
 
 try:

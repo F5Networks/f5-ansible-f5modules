@@ -261,7 +261,7 @@ try:
     from library.module_utils.network.f5.common import transform_name
     from library.module_utils.network.f5.ipaddress import is_valid_ip
     from library.module_utils.network.f5.ipaddress import compress_address
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.compare import cmp_str_with_none
+    from library.module_utils.network.f5.compare import cmp_str_with_none
 except ImportError:
     from ansible_collections.f5networks.f5_modules.plugins.module_utils.bigip import F5RestClient
     from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import F5ModuleError

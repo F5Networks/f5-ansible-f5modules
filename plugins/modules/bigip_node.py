@@ -329,7 +329,6 @@ try:
     from library.module_utils.network.f5.common import fq_name
     from library.module_utils.network.f5.common import f5_argument_spec
     from library.module_utils.network.f5.common import transform_name
-    from library.module_utils.compat.ipaddress import ip_address
 except ImportError:
     from ansible_collections.f5networks.f5_modules.plugins.module_utils.bigip import F5RestClient
     from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import F5ModuleError
@@ -337,7 +336,6 @@ except ImportError:
     from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import fq_name
     from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import f5_argument_spec
     from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import transform_name
-    from ansible.module_utils.compat.ipaddress import ip_address
 
 
 class Parameters(AnsibleF5Parameters):

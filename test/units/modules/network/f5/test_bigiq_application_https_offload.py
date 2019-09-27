@@ -147,7 +147,9 @@ class TestManager(unittest.TestCase):
             self.p1 = patch('ansible_collections.f5networks.f5_modules.plugins.modules.bigiq_application_https_offload.bigiq_version')
             self.p2 = patch('ansible_collections.f5networks.f5_modules.plugins.modules.bigiq_application_https_offload.ModuleParameters.template_reference')
             self.p3 = patch('ansible_collections.f5networks.f5_modules.plugins.modules.bigiq_application_https_offload.ModuleParameters.ssg_reference')
-            self.p4 = patch('ansible_collections.f5networks.f5_modules.plugins.modules.bigiq_application_https_offload.ModuleParameters.default_device_reference')
+            self.p4 = patch(
+                'ansible_collections.f5networks.f5_modules.plugins.modules.bigiq_application_https_offload.ModuleParameters.default_device_reference'
+            )
 
             self.m1 = self.p1.start()
             self.m2 = self.p2.start()

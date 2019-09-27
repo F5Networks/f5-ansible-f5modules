@@ -4,16 +4,16 @@ plugins/modules/bigip_gtm_pool_member.py validate-modules:undocumented-parameter
 plugins/modules/bigip_gtm_pool_member.py validate-modules:doc-choices-do-not-match-spec
 plugins/modules/bigip_gtm_pool_member.py validate-modules:parameter-type-not-in-doc
 plugins/modules/bigip_gtm_pool_member.py validate-modules:doc-missing-type
-plugins/modules/bigip_gtm_pool_member.py validate-modules:missing-subption-docs
+plugins/modules/bigip_gtm_pool_member.py validate-modules:missing-suboption-docs
 plugins/modules/bigip_pool.py validate-modules:undocumented-parameter
 plugins/modules/bigip_pool.py validate-modules:doc-choices-do-not-match-spec
 plugins/modules/bigip_pool.py validate-modules:parameter-type-not-in-doc
 plugins/modules/bigip_pool.py validate-modules:doc-missing-type
-plugins/modules/bigip_pool.py validate-modules:missing-subption-docs
+plugins/modules/bigip_pool.py validate-modules:missing-suboption-docs
 plugins/modules/bigip_pool_member.py validate-modules:undocumented-parameter
 plugins/modules/bigip_pool_member.py validate-modules:doc-choices-do-not-match-spec
 plugins/modules/bigip_pool_member.py validate-modules:parameter-type-not-in-doc
 plugins/modules/bigip_pool_member.py validate-modules:doc-missing-type
-plugins/modules/bigip_pool_member.py validate-modules:missing-subption-docs
+plugins/modules/bigip_pool_member.py validate-modules:missing-suboption-docs
 plugins/action/bigip.py action-plugin-docs # undocumented action plugin to fix, existed before sanity test was added
 plugins/action/bigiq.py action-plugin-docs # undocumented action plugin to fix, existed before sanity test was added
