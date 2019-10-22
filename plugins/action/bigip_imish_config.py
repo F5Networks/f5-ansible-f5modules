@@ -22,7 +22,7 @@ __metaclass__ = type
 import os
 import re
 
-from ansible_collections.f5networks.f5_modules.plugins.action.bigip import ActionModule as _ActionModule
+from ansible.plugins.action.normal import ActionModule as _ActionModule
 from ansible.module_utils._text import to_text
 from ansible.module_utils.network.common.backup import write_backup
 from ansible.module_utils.six.moves.urllib.parse import urlsplit

@@ -40,7 +40,6 @@ RETURN = """
 import random
 
 from ansible.errors import AnsibleError
-from ansible.module_utils._text import to_native
 from ansible_collections.f5networks.f5_modules.plugins.module_utils.bigiq import F5RestClient
 from ansible.plugins.lookup import LookupBase
 
