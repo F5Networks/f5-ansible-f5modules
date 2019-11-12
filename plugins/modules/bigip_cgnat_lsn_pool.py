@@ -9,7 +9,7 @@ __metaclass__ = type
 
 
 ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['preview'],
+                    'status': ['stableinterface'],
                     'supported_by': 'certified'}
 
 DOCUMENTATION = r'''
@@ -18,7 +18,7 @@ module: bigip_cgnat_lsn_pool
 short_description: Manage CGNAT LSN Pools
 description:
   - Manage CGNAT LSN Pools.
-version_added: 2.10
+version_added: "2.10"
 options:
   name:
     description:
