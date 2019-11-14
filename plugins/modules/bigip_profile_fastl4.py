@@ -9,7 +9,7 @@ __metaclass__ = type
 
 
 ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['preview'],
+                    'status': ['stableinterface'],
                     'supported_by': 'certified'}
 
 DOCUMENTATION = r'''
@@ -280,6 +280,10 @@ options:
     choices:
       - disconnect
       - fallback
+  hardware_syn_cookie:
+    description:
+      - Enables or disables hardware SYN cookie support when PVA10 is present on the system.
+    type: bool
   partition:
     description:
       - Device partition to manage resources on.
@@ -294,9 +298,10 @@ options:
       - present
       - absent
     default: present
-extends_documentation_fragment: f5
+extends_documentation_fragment: f5networks.f5_modules.f5
 author:
   - Tim Rupp (@caphrim007)
+  - Wojciech Wypior (@wojtek0806)
 '''
 
 EXAMPLES = r'''
@@ -476,6 +481,11 @@ timeout_recovery:
   returned: changed
   type: str
   sample: fallback
+hardware_syn_cookie:
+  description: Enables or disables hardware SYN cookie support when PVA10 is present on the system.
+  returned: changed
+  type: bool
+  sample: no
 '''
 
 from ansible.module_utils.basic import AnsibleModule
@@ -534,6 +544,7 @@ class Parameters(AnsibleF5Parameters):
         'tcpTimestampMode': 'tcp_timestamp_mode',
         'tcpWscaleMode': 'tcp_wscale_mode',
         'timeoutRecovery': 'timeout_recovery',
+        'hardwareSynCookie': 'hardware_syn_cookie',
     }
 
     api_attributes = [
@@ -571,6 +582,7 @@ class Parameters(AnsibleF5Parameters):
         'tcpTimestampMode',
         'tcpWscaleMode',
         'timeoutRecovery',
+        'hardwareSynCookie',
     ]
 
     returnables = [
@@ -608,6 +620,7 @@ class Parameters(AnsibleF5Parameters):
         'tcp_timestamp_mode',
         'tcp_wscale_mode',
         'timeout_recovery',
+        'hardware_syn_cookie',
     ]
 
     updatables = [
@@ -645,6 +658,7 @@ class Parameters(AnsibleF5Parameters):
         'tcp_timestamp_mode',
         'tcp_wscale_mode',
         'timeout_recovery',
+        'hardware_syn_cookie',
     ]
 
     @property
@@ -893,6 +907,14 @@ class ModuleParameters(Parameters):
                 return 65534
             return self._values[key]
 
+    @property
+    def hardware_syn_cookie(self):
+        result = flatten_boolean(self._values['hardware_syn_cookie'])
+        if result == 'yes':
+            return 'enabled'
+        if result == 'no':
+            return 'disabled'
+
 
 class Changes(Parameters):
     def to_return(self):
@@ -1113,13 +1135,6 @@ class Difference(object):
                 return attr1
         except AttributeError:
             return attr1
-
-    @property
-    def parent(self):
-        if self.want.parent != self.have.parent:
-            raise F5ModuleError(
-                "The parent profile cannot be changed"
-            )
 
     @property
     def description(self):
@@ -1365,6 +1380,7 @@ class ArgumentSpec(object):
             timeout_recovery=dict(
                 choices=['fallback', 'disconnect']
             ),
+            hardware_syn_cookie=dict(type='bool'),
             state=dict(
                 default='present',
                 choices=['present', 'absent']

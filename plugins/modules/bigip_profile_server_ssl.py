@@ -36,6 +36,11 @@ options:
       - Specifies the list of ciphers that the system supports. When creating a new
         profile, the default cipher list is provided by the parent profile.
     type: str
+  renegotiation:
+    description:
+      - Enables or disables SSL renegotiation.
+      - When creating a new profile, the setting is provided by the parent profile.
+    type: bool
   secure_renegotiation:
     description:
       - Specifies the method of secure renegotiations for SSL connections. When
@@ -126,7 +131,7 @@ options:
       - present
       - absent
     default: present
-extends_documentation_fragment: f5
+extends_documentation_fragment: f5networks.f5_modules.f5
 author:
   - Tim Rupp (@caphrim007)
 '''
@@ -153,6 +158,11 @@ secure_renegotiation:
   returned: changed
   type: str
   sample: request
+renegotiation:
+  description: Renegotiation of SSL sessions.
+  returned: changed
+  type: bool
+  sample: yes
 '''
 
 from ansible.module_utils.basic import AnsibleModule
@@ -200,6 +210,7 @@ class Parameters(AnsibleF5Parameters):
         'sniRequire',
         'serverName',
         'peerCertMode',
+        'renegotiation',
     ]
 
     returnables = [
@@ -214,6 +225,7 @@ class Parameters(AnsibleF5Parameters):
         'sni_require',
         'server_name',
         'server_certificate',
+        'renegotiation',
     ]
 
     updatables = [
@@ -227,6 +239,8 @@ class Parameters(AnsibleF5Parameters):
         'sni_require',
         'server_name',
         'server_certificate',
+        'renegotiation',
+        'parent',
     ]
 
     @property
@@ -301,6 +315,15 @@ class ModuleParameters(Parameters):
         return result
 
     @property
+    def renegotiation(self):
+        result = flatten_boolean(self._values['renegotiation'])
+        if result is None:
+            return None
+        if result == 'yes':
+            return 'enabled'
+        return 'disabled'
+
+    @property
     def sni_require(self):
         require = flatten_boolean(self._values['sni_require'])
         default = self.sni_default
@@ -368,13 +391,6 @@ class Difference(object):
             return result
         except AttributeError:
             return self.__default(param)
-
-    @property
-    def parent(self):
-        if self.want.parent != self.have.parent:
-            raise F5ModuleError(
-                "The parent profile cannot be changed"
-            )
 
     @property
     def sni_require(self):
@@ -631,6 +647,7 @@ class ArgumentSpec(object):
             sni_require=dict(type='bool'),
             server_name=dict(),
             ocsp_profile=dict(),
+            renegotiation=dict(type='bool'),
             partition=dict(
                 default='Common',
                 fallback=(env_fallback, ['F5_PARTITION'])

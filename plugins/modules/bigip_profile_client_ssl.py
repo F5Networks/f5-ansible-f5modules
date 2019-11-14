@@ -31,7 +31,6 @@ options:
         been set, it cannot be changed. By default, this value is the C(clientssl)
         parent on the C(Common) partition.
     type: str
-    default: /Common/clientssl
   ciphers:
     description:
       - Specifies the list of ciphers that the system supports. When creating a new
@@ -227,6 +226,22 @@ options:
       - Instructs the system to use the specified CRL file even if it has expired.
     type: bool
     version_added: 2.8
+  cache_size:
+    description:
+      - Specifies the number of sessions in the SSL session cache.
+      - The valid value range is between 0 and 4194304 inclusive.
+      - When creating a new profile, if this parameter is not specified, the default is provided
+        by the parent profile.
+    type: int
+    version_added: "f5_modules 1.0.0"
+  cache_timeout:
+    description:
+      - Specifies the timeout value in seconds of the SSL session cache entries.
+      - Acceptable values are between 0 and 86400 inclusive.
+      - When creating a new profile, if this parameter is not specified, the default is provided
+        by the parent profile.
+    type: int
+    version_added: "f5_modules 1.0.0"
   state:
     description:
       - When C(present), ensures that the profile exists.
@@ -239,7 +254,7 @@ options:
     version_added: 2.5
 notes:
   - Requires BIG-IP software version >= 12
-extends_documentation_fragment: f5
+extends_documentation_fragment: f5networks.f5_modules.f5
 author:
   - Tim Rupp (@caphrim007)
   - Wojciech Wypior (@wojtek0806)
@@ -337,6 +352,16 @@ renegotiation:
   returned: changed
   type: bool
   sample: yes
+cache_size:
+  description: Specifies the number of sessions in the SSL session cache.
+  returned: changed
+  type: int
+  sample: 2000
+cache_timeout:
+  description: Specifies the timeout value in seconds of the SSL session cache entries.
+  returned: changed
+  type: int
+  sample: 1800
 '''
 
 import os
@@ -384,7 +409,8 @@ class Parameters(AnsibleF5Parameters):
         'crlFile': 'client_auth_crl',
         'allowExpiredCrl': 'allow_expired_crl',
         'strictResume': 'strict_resume',
-        'renegotiation': 'renegotiation',
+        'cacheSize': 'cache_size',
+        'cacheTimeout': 'cache_timeout',
     }
 
     api_attributes = [
@@ -407,6 +433,8 @@ class Parameters(AnsibleF5Parameters):
         'allowExpiredCrl',
         'strictResume',
         'renegotiation',
+        'cacheSize',
+        'cacheTimeout',
     ]
 
     returnables = [
@@ -429,9 +457,12 @@ class Parameters(AnsibleF5Parameters):
         'allow_expired_crl',
         'strict_resume',
         'renegotiation',
+        'cache_size',
+        'cache_timeout',
     ]
 
     updatables = [
+        'parent',
         'ciphers',
         'cert_key_chain',
         'allow_non_ssl',
@@ -450,6 +481,8 @@ class Parameters(AnsibleF5Parameters):
         'allow_expired_crl',
         'strict_resume',
         'renegotiation',
+        'cache_size',
+        'cache_timeout',
     ]
 
     @property
@@ -657,6 +690,26 @@ class ApiParameters(Parameters):
             return None
         return self._values['client_auth_crl']
 
+    @property
+    def cache_size(self):
+        if self._values['cache_size'] is None:
+            return None
+        if 0 <= self._values['cache_size'] <= 4194304:
+            return self._values['cache_size']
+        raise F5ModuleError(
+            "Valid 'cache_size' must be in range 0 - 4194304 sessions."
+        )
+
+    @property
+    def cache_timeout(self):
+        if self._values['cache_timeout'] is None:
+            return None
+        if 0 <= self._values['cache_timeout'] <= 4194304:
+            return self._values['cache_timeout']
+        raise F5ModuleError(
+            "Valid 'cache_timeout' must be in range 0 - 86400 seconds."
+        )
+
 
 class Changes(Parameters):
     def to_return(self):
@@ -754,13 +807,6 @@ class Difference(object):
             return None
         else:
             return want
-
-    @property
-    def parent(self):
-        if self.want.parent != self.have.parent:
-            raise F5ModuleError(
-                "The parent profile cannot be changed"
-            )
 
     @property
     def cert_key_chain(self):
@@ -1020,7 +1066,7 @@ class ArgumentSpec(object):
         self.supports_check_mode = True
         argument_spec = dict(
             name=dict(required=True),
-            parent=dict(default='/Common/clientssl'),
+            parent=dict(),
             ciphers=dict(),
             allow_non_ssl=dict(type='bool'),
             secure_renegotiation=dict(
@@ -1087,6 +1133,8 @@ class ArgumentSpec(object):
             allow_expired_crl=dict(type='bool'),
             strict_resume=dict(type='bool'),
             renegotiation=dict(type='bool'),
+            cache_size=dict(type='int'),
+            cache_timeout=dict(type='int'),
             partition=dict(
                 default='Common',
                 fallback=(env_fallback, ['F5_PARTITION'])

@@ -9,7 +9,7 @@ __metaclass__ = type
 
 
 ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['preview'],
+                    'status': ['stableinterface'],
                     'supported_by': 'certified'}
 
 DOCUMENTATION = r'''
@@ -18,7 +18,7 @@ module: bigip_cgnat_lsn_pool
 short_description: Manage CGNAT LSN Pools
 description:
   - Manage CGNAT LSN Pools.
-version_added: 2.10
+version_added: "f5_modules 1.0.0"
 options:
   name:
     description:
@@ -184,7 +184,7 @@ options:
     default: present
 notes:
   - Requires CGNAT licensed and enabled on BIG-IP.
-extends_documentation_fragment: f5
+extends_documentation_fragment: f5networks.f5_modules.f5
 author:
   - Wojciech Wypior (@wojtek0806)
 '''
@@ -850,10 +850,17 @@ class Difference(object):
     def log_profile(self):
         if self.want.log_profile is None:
             return None
-        if self.want.log_profile != '':
-            if self.want.log_publisher is None and self.have.log_publisher is None:
+        if self.want.log_profile == '' and self.have.log_profile in [None, 'none']:
+            return None
+        if self.want.log_profile == '':
+            if self.have.log_publisher not in [None, 'none'] and self.want.log_publisher is None:
                 raise F5ModuleError(
-                    "The 'log_profile' cannot be updated without a valid 'log_publisher'."
+                    "The log_profile cannot be removed if log_publisher is defined on device."
+                )
+        if self.want.log_profile != '':
+            if self.want.log_publisher is None and self.have.log_publisher in [None, 'none']:
+                raise F5ModuleError(
+                    "The log_profile cannot be specified without an existing valid log_publisher."
                 )
         if self.want.log_profile != self.have.log_profile:
             return self.want.log_profile
@@ -862,21 +869,24 @@ class Difference(object):
     def log_publisher(self):
         if self.want.log_publisher is None:
             return None
+        if self.want.log_publisher == '' and self.have.log_publisher in [None, 'none']:
+            return None
         if self.want.log_publisher == '':
-            if self.want.log_profile:
+            if self.want.log_profile is None and self.have.log_profile not in [None, 'none']:
                 raise F5ModuleError(
-                    "The 'log_publisher' cannot be removed if 'log_profile' is defined."
-                )
-            if self.have.log_profile and self.want.log_profile != '':
-                raise F5ModuleError(
-                    "The 'log_publisher' cannot be removed if 'log_profile' is defined on the device."
+                    "The log_publisher cannot be removed if log_profile is defined on device."
                 )
         if self.want.log_publisher != self.have.log_publisher:
             return self.want.log_publisher
 
     @property
     def description(self):
-        return cmp_str_with_none(self.want.description, self.have.description)
+        if self.want.description is None:
+            return None
+        if self.have.description in [None, 'none'] and self.want.description == '':
+            return None
+        if self.want.description != self.have.description:
+            return self.want.description
 
 
 class ModuleManager(object):

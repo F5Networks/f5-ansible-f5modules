@@ -160,7 +160,7 @@ options:
       - absent
       - present
     default: present
-extends_documentation_fragment: f5
+extends_documentation_fragment: f5networks.f5_modules.f5
 notes:
   - BIG-IQ >= 6.1.0.
   - This module does not support atomic removal of discovered modules on the device.
@@ -747,7 +747,7 @@ class ModuleManager(object):
             self.client.provider['server_port'],
         )
 
-        query = "?$filter=address eq '{0}'".format(self.want.device_address)
+        query = "?$filter=address%20eq%20'{0}'".format(self.want.device_address)
         resp = self.client.api.get(uri + query)
 
         try:
@@ -1009,7 +1009,7 @@ class ModuleManager(object):
                 self.client.provider['server_port'],
             )
 
-        query = "?$filter=deviceReference/link eq '{0}'".format(self.device_id)
+        query = "?$filter=deviceReference/link%20eq%20'{0}'".format(self.device_id)
         resp = self.client.api.get(uri + query)
 
         try:

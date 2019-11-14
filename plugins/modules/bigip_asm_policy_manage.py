@@ -9,7 +9,7 @@ __metaclass__ = type
 
 
 ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['preview'],
+                    'status': ['stableinterface'],
                     'supported_by': 'certified'}
 
 DOCUMENTATION = r'''
@@ -94,7 +94,7 @@ options:
       - Device partition to manage resources on.
     type: str
     default: Common
-extends_documentation_fragment: f5
+extends_documentation_fragment: f5networks.f5_modules.f5
 author:
   - Wojciech Wypior (@wojtek0806)
 '''

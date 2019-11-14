@@ -1,7 +1,5 @@
 # f5networks.f5_modules
 
-**F5 Ansible collections are currently in preview. This notice will be removed once they are finalized.**
-
 This collection includes the most recently released ansible modules for BIG-IP and BIG-IQ from F5Networks. This collection packages and distributes playbooks, roles, modules, and plugins.
 
 ## Requirements

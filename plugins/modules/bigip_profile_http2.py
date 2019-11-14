@@ -9,7 +9,7 @@ __metaclass__ = type
 
 
 ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['preview'],
+                    'status': ['stableinterface'],
                     'supported_by': 'certified'}
 
 DOCUMENTATION = r'''
@@ -31,7 +31,6 @@ options:
       - When creating a new profile, if this parameter is not specified, the default
         is the system-supplied C(http2) profile.
     type: str
-    default: /Common/http2
   description:
     description:
       - Description of the profile.
@@ -110,7 +109,7 @@ options:
       - present
       - absent
     default: present
-extends_documentation_fragment: f5
+extends_documentation_fragment: f5networks.f5_modules.f5
 author:
   - Wojciech Wypior (@wojtek0806)
 '''
@@ -420,13 +419,6 @@ class Difference(object):
             return attr1
 
     @property
-    def parent(self):
-        if self.want.parent != self.have.parent:
-            raise F5ModuleError(
-                "The parent profile cannot be changed"
-            )
-
-    @property
     def description(self):
         if self.want.description is None:
             return None
@@ -627,7 +619,7 @@ class ArgumentSpec(object):
         self.supports_check_mode = True
         argument_spec = dict(
             name=dict(required=True),
-            parent=dict(default='/Common/http2'),
+            parent=dict(),
             activation_modes=dict(
                 type='list',
                 choices=[

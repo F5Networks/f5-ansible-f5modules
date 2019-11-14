@@ -9,7 +9,7 @@ __metaclass__ = type
 
 
 ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['preview'],
+                    'status': ['stableinterface'],
                     'supported_by': 'certified'}
 
 DOCUMENTATION = r'''
@@ -31,7 +31,6 @@ options:
       - When creating a new profile, if this parameter is not specified, the default
         is the system-supplied C(http) profile.
     type: str
-    default: /Common/http
   description:
     description:
       - Description of the profile.
@@ -374,7 +373,7 @@ options:
       - present
       - absent
     default: present
-extends_documentation_fragment: f5
+extends_documentation_fragment: f5networks.f5_modules.f5
 author:
   - Wojciech Wypior (@wojtek0806)
 '''
@@ -611,7 +610,6 @@ try:
     from library.module_utils.network.f5.common import flatten_boolean
     from library.module_utils.network.f5.common import transform_name
     from library.module_utils.network.f5.compare import cmp_simple_list
-    from library.module_utils.network.f5.urls import check_header_validity
 except ImportError:
     from ansible_collections.f5networks.f5_modules.plugins.module_utils.bigip import F5RestClient
     from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import F5ModuleError
@@ -621,7 +619,6 @@ except ImportError:
     from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import flatten_boolean
     from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import transform_name
     from ansible_collections.f5networks.f5_modules.plugins.module_utils.compare import cmp_simple_list
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.urls import check_header_validity
 
 
 class Parameters(AnsibleF5Parameters):
@@ -747,6 +744,7 @@ class Parameters(AnsibleF5Parameters):
         'poll_interval_global',
         'sampling_rate',
         'sampling_rate_global',
+        'parent',
     ]
 
 
@@ -983,7 +981,6 @@ class ModuleParameters(Parameters):
             return None
         if header_erase in ['none', '']:
             return self._values['header_erase']
-        check_header_validity(header_erase)
         return header_erase
 
     @property
@@ -993,7 +990,6 @@ class ModuleParameters(Parameters):
             return None
         if header_insert in ['none', '']:
             return self._values['header_insert']
-        check_header_validity(header_insert)
         return header_insert
 
     @property
@@ -1381,13 +1377,6 @@ class Difference(object):
             return attr1
 
     @property
-    def parent(self):
-        if self.want.parent != self.have.parent:
-            raise F5ModuleError(
-                "The parent http profile cannot be changed"
-            )
-
-    @property
     def dns_resolver(self):
         if self.want.dns_resolver is None:
             return None
@@ -1663,7 +1652,7 @@ class ArgumentSpec(object):
         self.select = ['allow', 'pass-through', 'reject']
         argument_spec = dict(
             name=dict(required=True),
-            parent=dict(default='/Common/http'),
+            parent=dict(),
             description=dict(),
             accept_xff=dict(type='bool'),
             xff_alternative_names=dict(type='list'),

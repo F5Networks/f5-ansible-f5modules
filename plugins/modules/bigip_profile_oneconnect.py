@@ -9,7 +9,7 @@ __metaclass__ = type
 
 
 ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['preview'],
+                    'status': ['stableinterface'],
                     'supported_by': 'certified'}
 
 DOCUMENTATION = r'''
@@ -127,7 +127,7 @@ options:
       - present
       - absent
     default: present
-extends_documentation_fragment: f5
+extends_documentation_fragment: f5networks.f5_modules.f5
 author:
   - Tim Rupp (@caphrim007)
 '''
@@ -253,6 +253,7 @@ class Parameters(AnsibleF5Parameters):
         'limit_type',
         'idle_timeout_override',
         'share_pools',
+        'parent',
     ]
 
 
@@ -372,13 +373,6 @@ class Difference(object):
                 return attr1
         except AttributeError:
             return attr1
-
-    @property
-    def parent(self):
-        if self.want.parent != self.have.parent:
-            raise F5ModuleError(
-                "The parent profile cannot be changed"
-            )
 
 
 class ModuleManager(object):
