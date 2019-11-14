@@ -14,149 +14,107 @@ ANSIBLE_METADATA = {'metadata_version': '1.1',
 
 DOCUMENTATION = r'''
 ---
-module: bigip_profile_sip
-short_description: Manage SIP profiles on a BIG-IP
+module: bigip_profile_ftp
+short_description: Manages FTP profiles
 description:
-  - Manage SIP profiles on a BIG-IP.
-version_added: "f5_modules 1.0.0"
+  - Manages FTP profiles.
+version_added: "f5_modules 1.0"
 options:
   name:
     description:
-      - Specifies the name of the SIP profile to manage.
+      - Specifies the name of the profile.
     type: str
     required: True
+  allow_ftps:
+    description:
+      - Allow explicit FTPS negotiation.
+    type: bool
+  description:
+    description:
+      - Description of the profile.
+    type: str
   parent:
     description:
       - Specifies the profile from which this profile inherits settings.
       - When creating a new profile, if this parameter is not specified, the default
-        is the system-supplied C(sip) profile.
+        is the system-supplied C(ftp) profile.
     type: str
-  community:
+  inherit_parent_profile:
     description:
-      - When the C(dialog_aware) is C(yes) and the configuration requires multiple SIP virtual server-profile pairings,
-        this string value indicates whether the pair belongs to the same SIP proxy functional group.
-    type: str
-  description:
-    description:
-      - Description of the profile.
-      - To remove the entry completely a value of C('') should be set.
-    type: str
-  dialog_aware:
-    description:
-      - When C(yes) the system gathers SIP dialog information, and automatically forwards SIP messages belonging to
-        the known SIP dialog.
+      - Enables the FTP data channel to inherit the TCP profile used by the control channel.
+      - "When C(no), the data channel uses FastL4 (BigProto) only."
     type: bool
-  enable_sip_firewall:
-    description:
-      - Specifies whether the Advanced Firewall Manager policy is enabled.
-      - When C(yes) the SIP Security settings configured in the DoS Profile in AFM apply to the virtual servers that
-        use this profile.
-    type: bool
-  insert_record_route_header:
-    description:
-      - When C(yes) inserts a Record-Route SIP header, which indicates the next hop for the following SIP request
-        messages.
-    type: bool
-  insert_via_header:
-    description:
-      - When C(yes) inserts a Via header in the forwarded SIP request.
-      - Via headers indicate the path taken through proxy devices and transports used. The response message uses this
-        routing information.
-    type: bool
-  user_via_header:
-    description:
-      - When C(insert_via_header) is C(yes), specifies the Via value the system inserts as the top Via header in a
-        SIP REQUEST message.
-      - "The valid value must include SIP protocol and sent_by settings, for example: C(SIP/2.0/UDP 10.10.10.10:5060)."
-      - To remove the entry completely a value of C('') should be set.
-    type: str
   log_profile:
     description:
-      - Specifies the logging settings the publisher uses to send log messages.
-      - Format of the name can be either be prepended by partition (C(/Common/foo)), or specified
-        just as an object name (C(foo)).
-      - To remove the entry a value of C('') can be set, however the profile C(log_publisher)
-        must also be set as C('').
+      - Configures the ALG log profile that controls logging.
     type: str
   log_publisher:
     description:
-      - Specifies the publisher defined to log messages.
-      - Format of the name can be either be prepended by partition (C(/Common/foo)), or specified
-        just as an object name (C(foo)).
-      - To remove the entry a value of C('') can be set, however the profile C(log_profile)
-        must also be set as C('').
+      - Configures the log publisher that handles events logging for this profile.
     type: str
-  secure_via_header:
+  translate_extended:
     description:
-      - When checked (enabled) inserts a secure Via header in the forwarded SIP request.
-      - A secure Via header indicates where the message originated.
-      - This parameter causes the inserted Via header to specify Transport Layer Security. For this option to take
-        effect, C(insert_via_header) must be set to (yes).
+      - Translates RFC 2428 extended requests C(EPSV) and C(EPRT) to C(PASV) and C(PORT)
+        when communicating with IPv4 servers.
+      - This option can only be used if the system is licensed for the BIG-IP Application Security Manager.
     type: bool
+  port:
+    description:
+      - Specifies a service for the data channel port used for this FTP profile.
+      - Valid range of values is between C(0) and C(65535) inclusive.
+    type: int
   security:
     description:
-      - "When C(yes) enables the use of enhanced Horizontal Security Layer (HSL) security checking."
+      - Enables secure FTP traffic for the BIG-IP Application Security Manager.
+      - This option can only be used if the system is licensed for the BIG-IP Application Security Manager.
     type: bool
-  terminate_on_bye:
-    description:
-      - When C(yes) closes a connection when a BYE transaction finishes.
-      - A BYE transaction is a message that an application sends to another application when it is ready to close the
-        connection between the two.
-    type: bool
-  max_size:
-    description:
-      - Specifies the maximum SIP message size that the BIG-IP system accepts..
-      - The accepted value range is C(0 - 4294967295) bytes.
-    type: int
-  partition:
-    description:
-      - Device partition to manage resources on.
-    type: str
-    default: Common
   state:
     description:
-      - When C(present), ensures that the profile exists.
-      - When C(absent), ensures the profile is removed.
+      - When C(state) is C(present), ensures that the ftp profile exists.
+      - When C(state) is C(absent), ensures that the ftp profile is removed.
     type: str
     choices:
       - present
       - absent
     default: present
+  partition:
+    description:
+      - Device partition to manage resources on.
+    type: str
+    default: Common
 extends_documentation_fragment: f5networks.f5_modules.f5
 author:
   - Wojciech Wypior (@wojtek0806)
 '''
 
 EXAMPLES = r'''
-- name: Create a SIP profile
-  bigip_profile_sip:
+- name: Create an ftp profile
+  bigip_profile_ftp:
     name: foo
-    parent: sip
-    log_profile: alg_log
-    log_publisher: foo-publisher
-    description: this is a new profile
+    parent: /Common/barfoo
+    port: 2221
+    allow_ftps: yes
+    provider:
+      password: secret
+      server: lb.mydomain.com
+      user: admin
+  delegate_to: localhost
+
+- name: Modify an ftp profile
+  bigip_profile_ftp:
+    name: foo
+    log_profile: /Common/alg_log
+    log_publisher: /Common/foo_publisher
     security: yes
+    description: my description
     provider:
       password: secret
       server: lb.mydomain.com
       user: admin
   delegate_to: localhost
 
-- name: Update SIP profile
-  bigip_profile_sip:
-    name: foo
-    insert_record_route_header: yes
-    enable_sip_firewall: yes
-    insert_via_header: yes
-    user_via_header: "SIP/2.0/UDP 10.10.10.10:5060"
-    provider:
-      password: secret
-      server: lb.mydomain.com
-      user: admin
-  delegate_to: localhost
-
-- name: Delete a SIP profile
-  bigip_profile_sip:
+- name: Remove an ftp profile
+  bigip_profile_ftp:
     name: foo
     state: absent
     provider:
@@ -167,73 +125,48 @@ EXAMPLES = r'''
 '''
 
 RETURN = r'''
+allow_ftps:
+  description: Allow explicit FTPS negotiation.
+  returned: changed
+  type: bool
+  sample: yes
 description:
   description: Description of the profile.
   returned: changed
   type: str
-  sample: "custom description"
-community:
-  description: Indicates whether the pair belongs to the same SIP proxy functional group.
-  returned: changed
-  type: str
-  sample: foo_community
+  sample: Foo is bar
 parent:
   description: Specifies the profile from which this profile inherits settings.
   returned: changed
   type: str
-  sample: /Common/sip
-dialog_aware:
-  description: Specifies if system gathers SIP dialog information.
+  sample: /Common/ftp
+inherit_parent_profile:
+  description: Enables the FTP data channel to inherit the TCP profile used by the control channel.
   returned: changed
   type: bool
   sample: no
-enable_sip_firewall:
-  description: Specifies whether the Advanced Firewall Manager policy is enabled.
-  returned: changed
-  type: bool
-  sample: yes
-insert_record_route_header:
-  description: Specifies is system will insert a Record-Route SIP header.
-  returned: changed
-  type: bool
-  sample: yes
-insert_via_header:
-  description: Specifies is system will insert a Via header in the forwarded SIP request.
-  returned: changed
-  type: bool
-  sample: yes
-user_via_header:
-  description: The value the system inserts as the top Via header in a SIP REQUEST message.
-  returned: changed
-  type: str
-  sample: "SIP/2.0/UDP 10.10.10.10:5060"
 log_profile:
-  description: The logging settings the publisher uses to send log messages.
+  description: The ALG log profile that controls logging.
   returned: changed
   type: str
-  sample: "/Common/alg_profile"
+  sample: /Common/foo_log_profile
 log_publisher:
-  description: The publisher defined to log messages.
+  description: The name of the log publisher that handles events logging for this profile.
   returned: changed
-  type: str
-  sample: "/Common/foo_publisher"
-secure_via_header:
-  description: Specifies is system will insert a secure Via header in the forwarded SIP request.
-  returned: changed
-  type: bool
-  sample: no
-security:
-  description: Enables the use of enhanced Horizontal Security Layer security checking.
+  type: list
+  sample: /Common/publisher_1
+translate_extended:
+  description: Translates RFC 2428 extended requests when communicating with IPv4 servers.
   returned: changed
   type: bool
   sample: yes
-terminate_on_bye:
-  description: Specifies if the system will close a connection when a BYE transaction finishes.
+port:
+  description: Specifies a service for the data channel port used for this FTP profile.
   returned: changed
-  type: bool
-  sample: no
-max_size:
-  description: Specifies if the system will close a connection when a BYE transaction finishes.
+  type: int
+  sample: 20
+security:
+  description: Enables secure FTP traffic for the BIG-IP Application Security Manager.
   returned: changed
   type: bool
   sample: no
@@ -250,7 +183,6 @@ try:
     from library.module_utils.network.f5.common import transform_name
     from library.module_utils.network.f5.common import f5_argument_spec
     from library.module_utils.network.f5.common import flatten_boolean
-    from library.module_utils.network.f5.compare import cmp_str_with_none
 except ImportError:
     from ansible_collections.f5networks.f5_modules.plugins.module_utils.bigip import F5RestClient
     from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import F5ModuleError
@@ -259,74 +191,51 @@ except ImportError:
     from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import transform_name
     from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import f5_argument_spec
     from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import flatten_boolean
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.compare import cmp_str_with_none
 
 
 class Parameters(AnsibleF5Parameters):
     api_map = {
+        'allowFtps': 'allow_ftps',
         'defaultsFrom': 'parent',
-        'dialogAware': 'dialog_aware',
-        'enableSipFirewall': 'enable_sip_firewall',
-        'insertRecordRouteHeader': 'insert_record_route_header',
-        'insertViaHeader': 'insert_via_header',
-        'userViaHeader': 'user_via_header',
+        'inheritParentProfile': 'inherit_parent_profile',
         'logProfile': 'log_profile',
         'logPublisher': 'log_publisher',
-        'secureViaHeader': 'secure_via_header',
-        'terminateOnBye': 'terminate_on_bye',
-        'maxSize': 'max_size',
+        'translateExtended': 'translate_extended',
     }
 
     api_attributes = [
-        'community',
+        'allowFtps',
         'description',
-        'defaultsFrom',
-        'dialogAware',
-        'enableSipFirewall',
-        'insertRecordRouteHeader',
-        'insertViaHeader',
+        'inheritParentProfile',
         'logProfile',
         'logPublisher',
-        'secureViaHeader',
+        'port',
         'security',
-        'terminateOnBye',
-        'userViaHeader',
-        'maxSize',
-
+        'translateExtended',
     ]
 
     returnables = [
+        'allow_ftps',
         'description',
-        'community',
-        'parent',
-        'dialog_aware',
-        'enable_sip_firewall',
-        'insert_record_route_header',
-        'insert_via_header',
-        'user_via_header',
+        'inherit_parent_profile',
         'log_profile',
         'log_publisher',
-        'secure_via_header',
+        'parent',
+        'port',
         'security',
-        'terminate_on_bye',
-        'max_size',
+        'translate_extended',
     ]
 
     updatables = [
+        'allow_ftps',
         'description',
-        'community',
-        'parent',
-        'dialog_aware',
-        'enable_sip_firewall',
-        'insert_record_route_header',
-        'insert_via_header',
-        'user_via_header',
+        'inherit_parent_profile',
         'log_profile',
         'log_publisher',
-        'secure_via_header',
+        'parent',
+        'port',
         'security',
-        'terminate_on_bye',
-        'max_size',
+        'translate_extended',
     ]
 
 
@@ -336,6 +245,42 @@ class ApiParameters(Parameters):
 
 class ModuleParameters(Parameters):
     @property
+    def allow_ftps(self):
+        result = flatten_boolean(self._values['allow_ftps'])
+        if result is None:
+            return None
+        if result == 'yes':
+            return 'enabled'
+        return 'disabled'
+
+    @property
+    def inherit_parent_profile(self):
+        result = flatten_boolean(self._values['inherit_parent_profile'])
+        if result is None:
+            return None
+        if result == 'yes':
+            return 'enabled'
+        return 'disabled'
+
+    @property
+    def log_profile(self):
+        if self._values['log_profile'] is None:
+            return None
+        if self._values['log_profile'] in ['', 'none']:
+            return ''
+        result = fq_name(self.partition, self._values['log_profile'])
+        return result
+
+    @property
+    def log_publisher(self):
+        if self._values['log_publisher'] is None:
+            return None
+        if self._values['log_publisher'] in ['', 'none']:
+            return ''
+        result = fq_name(self.partition, self._values['log_publisher'])
+        return result
+
+    @property
     def parent(self):
         if self._values['parent'] is None:
             return None
@@ -343,95 +288,32 @@ class ModuleParameters(Parameters):
         return result
 
     @property
-    def security(self):
-        if self._values['security'] is None:
+    def port(self):
+        if self._values['port'] is None:
             return None
-        result = flatten_boolean(self._values['security'])
-        if result == 'yes':
-            return 'enabled'
-        if result == 'no':
-            return 'disabled'
-
-    @property
-    def dialog_aware(self):
-        if self._values['dialog_aware'] is None:
-            return None
-        result = flatten_boolean(self._values['dialog_aware'])
-        if result == 'yes':
-            return 'enabled'
-        if result == 'no':
-            return 'disabled'
-
-    @property
-    def enable_sip_firewall(self):
-        if self._values['enable_sip_firewall'] is None:
-            return None
-        result = flatten_boolean(self._values['enable_sip_firewall'])
-        return result
-
-    @property
-    def insert_via_header(self):
-        if self._values['insert_via_header'] is None:
-            return None
-        result = flatten_boolean(self._values['insert_via_header'])
-        if result == 'yes':
-            return 'enabled'
-        if result == 'no':
-            return 'disabled'
-
-    @property
-    def secure_via_header(self):
-        if self._values['secure_via_header'] is None:
-            return None
-        result = flatten_boolean(self._values['secure_via_header'])
-        if result == 'yes':
-            return 'enabled'
-        if result == 'no':
-            return 'disabled'
-
-    @property
-    def terminate_on_bye(self):
-        if self._values['terminate_on_bye'] is None:
-            return None
-        result = flatten_boolean(self._values['terminate_on_bye'])
-        if result == 'yes':
-            return 'enabled'
-        if result == 'no':
-            return 'disabled'
-
-    @property
-    def insert_record_route_header(self):
-        if self._values['insert_record_route_header'] is None:
-            return None
-        result = flatten_boolean(self._values['insert_record_route_header'])
-        if result == 'yes':
-            return 'enabled'
-        if result == 'no':
-            return 'disabled'
-
-    @property
-    def max_size(self):
-        if self._values['max_size'] is None:
-            return None
-        if 0 <= self._values['max_size'] <= 4294967295:
-            return self._values['max_size']
+        if 0 <= self._values['port'] <= 65535:
+            return self._values['port']
         raise F5ModuleError(
-            "Valid 'max_size' must be in range 0 - 4294967295 bytes."
+            "Valid 'port' must be in range 0 - 65535."
         )
 
     @property
-    def log_profile(self):
-        if self._values['log_profile'] in [None, '']:
-            return self._values['log_profile']
-        result = fq_name(self.partition, self._values['log_profile'])
-        return result
+    def security(self):
+        result = flatten_boolean(self._values['security'])
+        if result is None:
+            return None
+        if result == 'yes':
+            return 'enabled'
+        return 'disabled'
 
     @property
-    def log_publisher(self):
-        if self._values['log_publisher'] in [None, '']:
-            return self._values['log_publisher']
-        result = fq_name(self.partition, self._values['log_publisher'])
-        return result
+    def translate_extended(self):
+        result = flatten_boolean(self._values['translate_extended'])
+        if result is None:
+            return None
+        if result == 'yes':
+            return 'enabled'
+        return 'disabled'
 
 
 class Changes(Parameters):
@@ -451,39 +333,25 @@ class UsableChanges(Changes):
 
 
 class ReportableChanges(Changes):
+
+    @property
+    def allow_ftps(self):
+        result = flatten_boolean(self._values['allow_ftps'])
+        return result
+
+    @property
+    def inherit_parent_profile(self):
+        result = flatten_boolean(self._values['inherit_parent_profile'])
+        return result
+
     @property
     def security(self):
         result = flatten_boolean(self._values['security'])
         return result
 
     @property
-    def dialog_aware(self):
-        result = flatten_boolean(self._values['dialog_aware'])
-        return result
-
-    @property
-    def enable_sip_firewall(self):
-        result = flatten_boolean(self._values['enable_sip_firewall'])
-        return result
-
-    @property
-    def insert_via_header(self):
-        result = flatten_boolean(self._values['insert_via_header'])
-        return result
-
-    @property
-    def terminate_on_bye(self):
-        result = flatten_boolean(self._values['terminate_on_bye'])
-        return result
-
-    @property
-    def insert_record_route_header(self):
-        result = flatten_boolean(self._values['insert_record_route_header'])
-        return result
-
-    @property
-    def secure_via_header(self):
-        result = flatten_boolean(self._values['secure_via_header'])
+    def translate_extended(self):
+        result = flatten_boolean(self._values['translate_extended'])
         return result
 
 
@@ -509,32 +377,21 @@ class Difference(object):
             return attr1
 
     @property
-    def description(self):
-        if self.want.description is None:
-            return None
-        if self.want.description == '':
-            if self.have.description in [None, "none"]:
-                return None
-        if self.want.description != self.have.description:
-            return self.want.description
-
-    @property
-    def user_via_header(self):
-        if self.want.user_via_header is None:
-            return None
-        if self.want.user_via_header == '':
-            if self.have.user_via_header in [None, "none"]:
-                return None
-        if self.want.user_via_header != self.have.user_via_header:
-            return self.want.user_via_header
-
-    @property
     def log_profile(self):
         if self.want.log_profile is None:
             return None
+        if self.want.log_profile == '' and self.have.log_profile in [None, 'none']:
+            return None
         if self.want.log_profile == '':
-            if self.have.log_profile in [None, "none"]:
-                return None
+            if self.have.log_publisher not in [None, 'none'] and self.want.log_publisher is None:
+                raise F5ModuleError(
+                    "The log_profile cannot be removed if log_publisher is defined on device."
+                )
+        if self.want.log_profile != '':
+            if self.want.log_publisher is None and self.have.log_publisher in [None, 'none']:
+                raise F5ModuleError(
+                    "The log_profile cannot be specified without an existing valid log_publisher."
+                )
         if self.want.log_profile != self.have.log_profile:
             return self.want.log_profile
 
@@ -542,11 +399,24 @@ class Difference(object):
     def log_publisher(self):
         if self.want.log_publisher is None:
             return None
+        if self.want.log_publisher == '' and self.have.log_publisher in [None, 'none']:
+            return None
         if self.want.log_publisher == '':
-            if self.have.log_publisher in [None, "none"]:
-                return None
+            if self.want.log_profile is None and self.have.log_profile not in [None, 'none']:
+                raise F5ModuleError(
+                    "The log_publisher cannot be removed if log_profile is defined on device."
+                )
         if self.want.log_publisher != self.have.log_publisher:
             return self.want.log_publisher
+
+    @property
+    def description(self):
+        if self.want.description is None:
+            return None
+        if self.have.description in [None, 'none'] and self.want.description == '':
+            return None
+        if self.want.description != self.have.description:
+            return self.want.description
 
 
 class ModuleManager(object):
@@ -650,7 +520,7 @@ class ModuleManager(object):
         return True
 
     def exists(self):
-        uri = "https://{0}:{1}/mgmt/tm/ltm/profile/sip/{2}".format(
+        uri = "https://{0}:{1}/mgmt/tm/ltm/profile/ftp/{2}".format(
             self.client.provider['server'],
             self.client.provider['server_port'],
             transform_name(self.want.partition, self.want.name)
@@ -668,7 +538,7 @@ class ModuleManager(object):
         params = self.changes.api_params()
         params['name'] = self.want.name
         params['partition'] = self.want.partition
-        uri = "https://{0}:{1}/mgmt/tm/ltm/profile/sip/".format(
+        uri = "https://{0}:{1}/mgmt/tm/ltm/profile/ftp/".format(
             self.client.provider['server'],
             self.client.provider['server_port'],
         )
@@ -687,7 +557,7 @@ class ModuleManager(object):
 
     def update_on_device(self):
         params = self.changes.api_params()
-        uri = "https://{0}:{1}/mgmt/tm/ltm/profile/sip/{2}".format(
+        uri = "https://{0}:{1}/mgmt/tm/ltm/profile/ftp/{2}".format(
             self.client.provider['server'],
             self.client.provider['server_port'],
             transform_name(self.want.partition, self.want.name)
@@ -705,7 +575,7 @@ class ModuleManager(object):
                 raise F5ModuleError(resp.content)
 
     def remove_from_device(self):
-        uri = "https://{0}:{1}/mgmt/tm/ltm/profile/sip/{2}".format(
+        uri = "https://{0}:{1}/mgmt/tm/ltm/profile/ftp/{2}".format(
             self.client.provider['server'],
             self.client.provider['server_port'],
             transform_name(self.want.partition, self.want.name)
@@ -716,7 +586,7 @@ class ModuleManager(object):
         raise F5ModuleError(response.content)
 
     def read_current_from_device(self):
-        uri = "https://{0}:{1}/mgmt/tm/ltm/profile/sip/{2}".format(
+        uri = "https://{0}:{1}/mgmt/tm/ltm/profile/ftp/{2}".format(
             self.client.provider['server'],
             self.client.provider['server_port'],
             transform_name(self.want.partition, self.want.name)
@@ -740,20 +610,15 @@ class ArgumentSpec(object):
         self.supports_check_mode = True
         argument_spec = dict(
             name=dict(required=True),
-            parent=dict(),
-            security=dict(type='bool'),
+            allow_ftps=dict(type='bool'),
             description=dict(),
-            community=dict(),
-            dialog_aware=dict(type='bool'),
-            enable_sip_firewall=dict(type='bool'),
-            insert_via_header=dict(type='bool'),
-            user_via_header=dict(),
-            secure_via_header=dict(type='bool'),
-            terminate_on_bye=dict(type='bool'),
-            max_size=dict(type='int'),
+            parent=dict(),
+            inherit_parent_profile=dict(type='bool'),
             log_profile=dict(),
             log_publisher=dict(),
-            insert_record_route_header=dict(type='bool'),
+            translate_extended=dict(type='bool'),
+            port=dict(type='int'),
+            security=dict(type='bool'),
             state=dict(
                 default='present',
                 choices=['present', 'absent']
