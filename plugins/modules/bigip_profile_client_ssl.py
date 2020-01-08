@@ -69,6 +69,13 @@ options:
             to compare them when updating a client SSL profile. Due to this, if you specify a
             passphrase, this module will always register a C(changed) event.
         type: str
+      true_names:
+        description:
+          - When C(yes) the module will not append C(.crt) and C(.key) extension to the given certificate and key names.
+          - When C(no) the module will append C(.crt) and C(.key) extension to the given certificate and key names.
+        type: bool
+        default: no
+        version_added: "f5_modules 1.1"
     type: list
   partition:
     description:
@@ -233,7 +240,7 @@ options:
       - When creating a new profile, if this parameter is not specified, the default is provided
         by the parent profile.
     type: int
-    version_added: "f5_modules 1.0.0"
+    version_added: "f5_modules 1.0"
   cache_timeout:
     description:
       - Specifies the timeout value in seconds of the SSL session cache entries.
@@ -241,7 +248,7 @@ options:
       - When creating a new profile, if this parameter is not specified, the default is provided
         by the parent profile.
     type: int
-    version_added: "f5_modules 1.0.0"
+    version_added: "f5_modules 1.0"
   state:
     description:
       - When C(present), ensures that the profile exists.
@@ -496,12 +503,16 @@ class Parameters(AnsibleF5Parameters):
 
 class ModuleParameters(Parameters):
     def _key_filename(self, name):
+        if self.true_names:
+            return name
         if name.endswith('.key'):
             return name
         else:
             return name + '.key'
 
     def _cert_filename(self, name):
+        if self.true_names:
+            return name
         if name.endswith('.crt'):
             return name
         else:
@@ -513,6 +524,14 @@ class ModuleParameters(Parameters):
         else:
             result = self._cert_filename(fq_name(self.partition, item['chain']))
         return result
+
+    @property
+    def true_names(self):
+        result = flatten_boolean(self._values['true_names'])
+        if result == 'yes':
+            return True
+        if result == 'no':
+            return False
 
     @property
     def parent(self):
@@ -956,11 +975,21 @@ class ModuleManager(object):
         resp = self.client.api.get(uri)
         try:
             response = resp.json()
-        except ValueError:
-            return False
+        except ValueError as ex:
+            raise F5ModuleError(str(ex))
+
         if resp.status == 404 or 'code' in response and response['code'] == 404:
             return False
-        return True
+        if resp.status in [200, 201] or 'code' in response and response['code'] in [200, 201]:
+            return True
+
+        errors = [401, 403, 409, 500, 501, 502, 503, 504]
+
+        if resp.status in errors or 'code' in response and response['code'] in errors:
+            if 'message' in response:
+                raise F5ModuleError(response['message'])
+            else:
+                raise F5ModuleError(resp.content)
 
     def update(self):
         self.have = self.read_current_from_device()
@@ -1109,7 +1138,11 @@ class ArgumentSpec(object):
                     cert=dict(required=True),
                     key=dict(required=True),
                     chain=dict(),
-                    passphrase=dict()
+                    passphrase=dict(),
+                    true_names=dict(
+                        type='bool',
+                        default='no'
+                    ),
                 )
             ),
             state=dict(

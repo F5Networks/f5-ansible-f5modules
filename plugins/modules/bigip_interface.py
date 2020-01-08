@@ -18,7 +18,7 @@ module: bigip_interface
 short_description: Module to manage BIG-IP physical interfaces.
 description:
   - Module to manage BIG-IP physical interfaces.
-version_added: "f5_modules 1.0.0"
+version_added: "f5_modules 1.0"
 options:
   name:
     description:
@@ -799,11 +799,21 @@ class ModuleManager(object):
         resp = self.client.api.get(uri)
         try:
             response = resp.json()
-        except ValueError:
-            return False
+        except ValueError as ex:
+            raise F5ModuleError(str(ex))
+
         if resp.status == 404 or 'code' in response and response['code'] == 404:
             return False
-        return True
+        if resp.status in [200, 201] or 'code' in response and response['code'] in [200, 201]:
+            return True
+
+        errors = [401, 403, 409, 500, 501, 502, 503, 504]
+
+        if resp.status in errors or 'code' in response and response['code'] in errors:
+            if 'message' in response:
+                raise F5ModuleError(response['message'])
+            else:
+                raise F5ModuleError(resp.content)
 
     def update_on_device(self):
         params = self.changes.api_params()

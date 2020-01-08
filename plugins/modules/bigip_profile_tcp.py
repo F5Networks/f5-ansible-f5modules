@@ -113,7 +113,7 @@ options:
       - When C(yes) the system sends fewer than one ACK segment per data segment received.
       - When creating a new profile, if this parameter is not specified, the default is provided by the parent profile.
     type: bool
-    version_added: "f5_modules 1.0.0"
+    version_added: "f5_modules 1.0"
   ip_tos_to_client:
     description:
       - Specifies the L3 Type of Service level that the system inserts in TCP packets destined for clients.
@@ -124,7 +124,7 @@ options:
         Valid number range is 0 - 255 inclusive.
       - When creating a new profile, if this parameter is not specified, the default is provided by the parent profile.
     type: str
-    version_added: "f5_modules 1.0.0"
+    version_added: "f5_modules 1.0"
   partition:
     description:
       - Device partition to manage resources on.
@@ -567,11 +567,21 @@ class ModuleManager(object):
         resp = self.client.api.get(uri)
         try:
             response = resp.json()
-        except ValueError:
-            return False
+        except ValueError as ex:
+            raise F5ModuleError(str(ex))
+
         if resp.status == 404 or 'code' in response and response['code'] == 404:
             return False
-        return True
+        if resp.status in [200, 201] or 'code' in response and response['code'] in [200, 201]:
+            return True
+
+        errors = [401, 403, 409, 500, 501, 502, 503, 504]
+
+        if resp.status in errors or 'code' in response and response['code'] in errors:
+            if 'message' in response:
+                raise F5ModuleError(response['message'])
+            else:
+                raise F5ModuleError(resp.content)
 
     def update(self):
         self.have = self.read_current_from_device()

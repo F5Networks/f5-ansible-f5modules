@@ -91,6 +91,14 @@ options:
     choices:
       - pre-shared-key
       - rsa-signature
+  phase1_lifetime:
+    description:
+      - Defines the lifetime in minutes of an IKE SA which will be proposed in the phase 1 negotiations..
+      - The accepted value range is C(1 - 4294967295) minutes.
+      - When creating a new IKE peer, if this value is not specified, the default value set by the system is
+        C(1440) minutes.
+    type: int
+    version_added: "f5_modules 1.1"
   phase1_cert:
     description:
       - Specifies the digital certificate to use for the RSA signature.
@@ -340,6 +348,7 @@ class Parameters(AnsibleF5Parameters):
         'verifyCert': 'phase1_verify_peer_cert',
         'peersIdValue': 'verified_id_value',
         'myIdValue': 'presented_id_value',
+        'lifetime': 'phase1_lifetime',
     }
 
     api_attributes = [
@@ -358,6 +367,7 @@ class Parameters(AnsibleF5Parameters):
         'peersIdValue',
         'myIdValue',
         'description',
+        'lifetime',
     ]
 
     returnables = [
@@ -376,6 +386,7 @@ class Parameters(AnsibleF5Parameters):
         'verified_id_value',
         'presented_id_value',
         'description',
+        'phase1_lifetime',
     ]
 
     updatables = [
@@ -394,6 +405,7 @@ class Parameters(AnsibleF5Parameters):
         'verified_id_value',
         'presented_id_value',
         'description',
+        'phase1_lifetime',
     ]
 
     @property
@@ -425,6 +437,16 @@ class ModuleParameters(Parameters):
         if self._values['phase1_key'] in ['', 'none']:
             return ''
         return fq_name(self.partition, self._values['phase1_key'])
+
+    @property
+    def phase1_lifetime(self):
+        if self._values['phase1_lifetime'] is None:
+            return None
+        if 1 <= int(self._values['phase1_lifetime']) <= 4294967295:
+            return int(self._values['phase1_lifetime'])
+        raise F5ModuleError(
+            "Valid 'phase1_lifetime' must be in range 1 - 4294967295."
+        )
 
     @property
     def description(self):
@@ -574,11 +596,21 @@ class ModuleManager(object):
         resp = self.client.api.get(uri)
         try:
             response = resp.json()
-        except ValueError:
-            return False
+        except ValueError as ex:
+            raise F5ModuleError(str(ex))
+
         if resp.status == 404 or 'code' in response and response['code'] == 404:
             return False
-        return True
+        if resp.status in [200, 201] or 'code' in response and response['code'] in [200, 201]:
+            return True
+
+        errors = [401, 403, 409, 500, 501, 502, 503, 504]
+
+        if resp.status in errors or 'code' in response and response['code'] in errors:
+            if 'message' in response:
+                raise F5ModuleError(response['message'])
+            else:
+                raise F5ModuleError(resp.content)
 
     def update(self):
         self.have = self.read_current_from_device()
@@ -732,6 +764,7 @@ class ArgumentSpec(object):
                 type='list',
                 choices=['v1', 'v2']
             ),
+            phase1_lifetime=dict(type='int'),
             phase1_encryption_algorithm=dict(
                 choices=[
                     '3des', 'des', 'blowfish', 'cast128', 'aes128', 'aes192',
