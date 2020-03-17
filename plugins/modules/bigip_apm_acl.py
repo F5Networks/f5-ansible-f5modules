@@ -54,6 +54,7 @@ options:
       - The order in which the rules are placed as arguments to this parameter, determines their order in the ACL,
         in other words changing the order of the same elements will cause a change on the unit.
     type: list
+    elements: dict
     suboptions:
       action:
         description:
@@ -872,12 +873,9 @@ class ModuleManager(object):
         except ValueError as ex:
             raise F5ModuleError(str(ex))
 
-        if 'code' in response and response['code'] in [400, 409]:
-            if 'message' in response:
-                raise F5ModuleError(response['message'])
-            else:
-                raise F5ModuleError(resp.content)
-        return True
+        if resp.status in [200, 201] or 'code' in response and response['code'] in [200, 201]:
+            return True
+        raise F5ModuleError(resp.content)
 
     def update_on_device(self):
         params = self.changes.api_params()
@@ -892,11 +890,9 @@ class ModuleManager(object):
         except ValueError as ex:
             raise F5ModuleError(str(ex))
 
-        if 'code' in response and response['code'] == 400:
-            if 'message' in response:
-                raise F5ModuleError(response['message'])
-            else:
-                raise F5ModuleError(resp.content)
+        if resp.status in [200, 201] or 'code' in response and response['code'] in [200, 201]:
+            return True
+        raise F5ModuleError(resp.content)
 
     def remove_from_device(self):
         uri = "https://{0}:{1}/mgmt/tm/apm/acl/{2}".format(
@@ -905,7 +901,8 @@ class ModuleManager(object):
             transform_name(self.want.partition, self.want.name)
         )
         response = self.client.api.delete(uri)
-        if response.status == 200:
+
+        if response.status in [200, 201]:
             return True
         raise F5ModuleError(response.content)
 
@@ -921,12 +918,9 @@ class ModuleManager(object):
         except ValueError as ex:
             raise F5ModuleError(str(ex))
 
-        if 'code' in response and response['code'] == 400:
-            if 'message' in response:
-                raise F5ModuleError(response['message'])
-            else:
-                raise F5ModuleError(resp.content)
-        return ApiParameters(params=response)
+        if resp.status in [200, 201] or 'code' in response and response['code'] in [200, 201]:
+            return ApiParameters(params=response)
+        raise F5ModuleError(resp.content)
 
 
 class ArgumentSpec(object):

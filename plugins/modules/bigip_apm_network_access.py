@@ -81,6 +81,7 @@ options:
     description:
       - Specifies IPV6 address spaces for which traffic is not forced through the tunnel.
     type: list
+    elements: dict
     suboptions:
       subnet:
         description:
@@ -91,6 +92,7 @@ options:
     description:
       - Specifies IPV4 address spaces for which traffic is not forced through the tunnel.
     type: list
+    elements: dict
     suboptions:
       subnet:
         description:
@@ -101,15 +103,18 @@ options:
     description:
       - Specifies the DNS address spaces for which traffic is not forced through the tunnel.
     type: list
+    elements: str
   dns_address_space:
     description:
       - Specifies a list of domain names describing the target LAN DNS addresses.
     type: list
+    elements: str
   ipv4_address_space:
     description:
       - Specifies a list of IPv4 hosts or networks describing the target LAN.
       - This option is mandatory when creating a new resource and C(split_tunnel) is set to C(yes).
     type: list
+    elements: dict
     suboptions:
       subnet:
         description:
@@ -121,6 +126,7 @@ options:
       - Specifies a list of IPv6 hosts or networks describing the target LAN.
       - This option is mandatory when creating a new resource and C(split_tunnel) is set to C(yes).
     type: list
+    elements: dict
     suboptions:
       subnet:
         description:
@@ -903,12 +909,10 @@ class ModuleManager(object):
         except ValueError as ex:
             raise F5ModuleError(str(ex))
 
-        if 'code' in response and response['code'] in [400, 409]:
-            if 'message' in response:
-                raise F5ModuleError(response['message'])
-            else:
-                raise F5ModuleError(resp.content)
-        return True
+        if resp.status in [200, 201] or 'code' in response and response['code'] in [200, 201]:
+            return True
+
+        raise F5ModuleError(resp.content)
 
     def update_on_device(self):
         params = self.changes.api_params()
@@ -923,11 +927,9 @@ class ModuleManager(object):
         except ValueError as ex:
             raise F5ModuleError(str(ex))
 
-        if 'code' in response and response['code'] == 400:
-            if 'message' in response:
-                raise F5ModuleError(response['message'])
-            else:
-                raise F5ModuleError(resp.content)
+        if resp.status in [200, 201] or 'code' in response and response['code'] in [200, 201]:
+            return True
+        raise F5ModuleError(resp.content)
 
     def remove_from_device(self):
         uri = "https://{0}:{1}/mgmt/tm/apm/resource/network-access/{2}".format(
@@ -952,12 +954,9 @@ class ModuleManager(object):
         except ValueError as ex:
             raise F5ModuleError(str(ex))
 
-        if 'code' in response and response['code'] == 400:
-            if 'message' in response:
-                raise F5ModuleError(response['message'])
-            else:
-                raise F5ModuleError(resp.content)
-        return ApiParameters(params=response)
+        if resp.status in [200, 201] or 'code' in response and response['code'] in [200, 201]:
+            return ApiParameters(params=response)
+        raise F5ModuleError(resp.content)
 
 
 class ArgumentSpec(object):
@@ -981,30 +980,36 @@ class ArgumentSpec(object):
             ipv6_lease_pool=dict(),
             excluded_ipv6_adresses=dict(
                 type='list',
+                elements='dict',
                 options=dict(
                     subnet=dict(),
                 )
             ),
             excluded_ipv4_adresses=dict(
                 type='list',
+                elements='dict',
                 options=dict(
                     subnet=dict(),
                 )
             ),
             excluded_dns_addresses=dict(
-                type='list'
+                type='list',
+                elements='str',
             ),
             dns_address_space=dict(
-                type='list'
+                type='list',
+                elements='str',
             ),
             ipv4_address_space=dict(
                 type='list',
+                elements='dict',
                 options=dict(
                     subnet=dict(),
                 )
             ),
             ipv6_address_space=dict(
                 type='list',
+                elements='dict',
                 options=dict(
                     subnet=dict(),
                 )

@@ -14,6 +14,7 @@ import datetime
 from ansible.module_utils._text import to_text
 from ansible.module_utils.basic import env_fallback
 from ansible.module_utils.connection import exec_command
+from ansible.module_utils.network.common.config import NetworkConfig, ConfigLine, ignore_line
 from ansible.module_utils.network.common.utils import to_list
 from ansible.module_utils.network.common.utils import ComplexList
 from ansible.module_utils.six import iteritems
@@ -28,6 +29,7 @@ MANAGED_BY_ANNOTATION_MODIFIED = 'f5-ansible.last_modified'
 
 f5_provider_spec = {
     'server': dict(
+        required=True,
         fallback=(env_fallback, ['F5_SERVER'])
     ),
     'server_port': dict(
@@ -36,12 +38,14 @@ f5_provider_spec = {
         fallback=(env_fallback, ['F5_SERVER_PORT'])
     ),
     'user': dict(
+        required=True,
         fallback=(env_fallback, ['F5_USER', 'ANSIBLE_NET_USERNAME'])
     ),
     'password': dict(
+        required=True,
         no_log=True,
         aliases=['pass', 'pwd'],
-        fallback=(env_fallback, ['F5_PASSWORD', 'ANSIBLE_NET_PASSWORD'])
+        fallback=(env_fallback, ['F5_PASSWORD', 'ANSIBLE_NET_PASSWORD']),
     ),
     'ssh_keyfile': dict(
         type='path'
@@ -567,6 +571,61 @@ class AnsibleF5Parameters(object):
 
     def _filter_params(self, params):
         return dict((k, v) for k, v in iteritems(params) if v is not None)
+
+
+class ImishConfig(NetworkConfig):
+    def add(self, lines, parents=None, duplicates=False):
+        ancestors = list()
+        offset = 0
+        obj = None
+
+        # global config command
+        if not parents:
+            for line in lines:
+                # handle ignore lines
+                if ignore_line(line):
+                    continue
+
+                item = ConfigLine(line)
+                item.raw = line
+                if item not in self.items:
+                    self.items.append(item)
+
+        else:
+            for index, p in enumerate(parents):
+                try:
+                    i = index + 1
+                    obj = self.get_block(parents[:i])[0]
+                    ancestors.append(obj)
+
+                except ValueError:
+                    # add parent to config
+                    offset = index * self._indent
+                    obj = ConfigLine(p)
+                    obj.raw = p.rjust(len(p) + offset)
+                    if ancestors:
+                        obj._parents = list(ancestors)
+                        ancestors[-1]._children.append(obj)
+                    self.items.append(obj)
+                    ancestors.append(obj)
+
+            # add child objects
+            for line in lines:
+                # handle ignore lines
+                if ignore_line(line):
+                    continue
+
+                # check if child already exists
+                for child in ancestors[-1]._children:
+                    if child.text == line and not duplicates:
+                        break
+                else:
+                    offset = len(parents) * self._indent
+                    item = ConfigLine(line)
+                    item.raw = line.rjust(len(line) + offset)
+                    item._parents = ancestors
+                    ancestors[-1]._children.append(item)
+                    self.items.append(item)
 
 
 class F5ModuleError(Exception):
