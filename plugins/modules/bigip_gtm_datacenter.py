@@ -135,15 +135,27 @@ class Parameters(AnsibleF5Parameters):
     api_map = {}
 
     updatables = [
-        'location', 'description', 'contact', 'state',
+        'location',
+        'description',
+        'contact',
+        'state',
     ]
 
     returnables = [
-        'location', 'description', 'contact', 'state', 'enabled', 'disabled',
+        'location',
+        'description',
+        'contact',
+        'state',
+        'enabled',
+        'disabled',
     ]
 
     api_attributes = [
-        'enabled', 'location', 'description', 'contact', 'disabled',
+        'enabled',
+        'location',
+        'description',
+        'contact',
+        'disabled',
     ]
 
 
@@ -401,11 +413,9 @@ class ModuleManager(object):
         except ValueError as ex:
             raise F5ModuleError(str(ex))
 
-        if 'code' in response and response['code'] in [400, 403]:
-            if 'message' in response:
-                raise F5ModuleError(response['message'])
-            else:
-                raise F5ModuleError(resp.content)
+        if resp.status in [200, 201] or 'code' in response and response['code'] in [200, 201]:
+            return True
+        raise F5ModuleError(resp.content)
 
     def update_on_device(self):
         params = self.changes.api_params()
@@ -420,11 +430,9 @@ class ModuleManager(object):
         except ValueError as ex:
             raise F5ModuleError(str(ex))
 
-        if 'code' in response and response['code'] == 400:
-            if 'message' in response:
-                raise F5ModuleError(response['message'])
-            else:
-                raise F5ModuleError(resp.content)
+        if resp.status in [200, 201] or 'code' in response and response['code'] in [200, 201]:
+            return True
+        raise F5ModuleError(resp.content)
 
     def remove_from_device(self):
         uri = "https://{0}:{1}/mgmt/tm/gtm/datacenter/{2}".format(
@@ -448,12 +456,9 @@ class ModuleManager(object):
         except ValueError as ex:
             raise F5ModuleError(str(ex))
 
-        if 'code' in response and response['code'] == 400:
-            if 'message' in response:
-                raise F5ModuleError(response['message'])
-            else:
-                raise F5ModuleError(resp.content)
-        return ApiParameters(params=response)
+        if resp.status in [200, 201] or 'code' in response and response['code'] in [200, 201]:
+            return ApiParameters(params=response)
+        raise F5ModuleError(resp.content)
 
 
 class ArgumentSpec(object):

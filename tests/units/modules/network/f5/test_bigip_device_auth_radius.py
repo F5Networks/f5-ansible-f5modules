@@ -61,54 +61,30 @@ def load_fixture(name):
 class TestParameters(unittest.TestCase):
     def test_module_parameters(self):
         args = dict(
-            servers=[
-                dict(
-                    server='10.10.10.10',
-                    port='1812',
-                    timeout=5,
-                    secret='secret1'
-                ),
-                dict(
-                    server='11.11.11.11',
-                    port='1813',
-                    timeout=6,
-                    secret='secret2'
-                )],
+            servers=['foo1', 'foo2'],
             retries=5,
-            service_type="login",
-            accounting_bug="disabled",
-            use_for_auth="yes"
+            service_type='login',
+            accounting_bug=False,
+            fallback_to_local=True,
+            use_for_auth=True,
         )
-        p = ApiParameters(params=args)
-        assert p.servers[0]['port'] == '1812'
-        assert p.servers[0]['server'] == '10.10.10.10'
-        assert p.servers[0]['timeout'] == 5
-        assert p.servers[0]['secret'] == 'secret1'
+        p = ModuleParameters(params=args)
 
-        assert p.servers[1]['port'] == '1813'
-        assert p.servers[1]['server'] == '11.11.11.11'
-        assert p.servers[1]['timeout'] == 6
-        assert p.servers[1]['secret'] == 'secret2'
-
+        assert '/Common/foo1' and '/Common/foo2' in p.servers
         assert p.retries == 5
         assert p.use_for_auth == 'yes'
         assert p.accounting_bug == 'disabled'
         assert p.service_type == "login"
+        assert p.fallback_to_local == 'yes'
 
     def test_api_parameters(self):
         args = load_fixture('load_radius_config.json')
-        args['servers'] = list()
-        args['servers'].append(load_fixture('load_radius_server.json'))
 
         p = ApiParameters(params=args)
         assert p.retries == 3
         assert p.service_type == 'authenticate-only'
         assert p.accounting_bug == 'disabled'
-        assert p.servers[0] == dict(name='system_auth_name1',
-                                    port=1812,
-                                    server='1.1.1.1',
-                                    timeout=5
-                                    )
+        assert p.servers == ['/Common/system_auth_name1']
 
 
 class TestManager(unittest.TestCase):
@@ -118,20 +94,12 @@ class TestManager(unittest.TestCase):
 
     def test_create(self, *args):
         set_module_args(dict(
-            servers=[
-                dict(
-                    server='10.10.10.10',
-                    port='1813',
-                    timeout=5,
-                    secret='secret1'
-                ),
-                dict(
-                    server='10.10.10.10',
-                    port='1813',
-                    timeout=5,
-                    secret='secret1'
-                )
-            ],
+            servers=['foo1', 'foo2'],
+            retries=5,
+            service_type='login',
+            accounting_bug=False,
+            fallback_to_local=True,
+            use_for_auth=True,
             state='present',
             provider=dict(
                 password='admin',
@@ -150,6 +118,12 @@ class TestManager(unittest.TestCase):
         mm.exists = Mock(return_value=False)
         mm.create_on_device = Mock(return_value=True)
         mm.update_auth_source_on_device = Mock(return_value=True)
+        mm.update_fallback_on_device = Mock(return_value=True)
 
         results = mm.exec_module()
         assert results['changed'] is True
+        assert '/Common/foo1' and '/Common/foo2' in results['servers']
+        assert results['retries'] == 5
+        assert results['accounting_bug'] == 'disabled'
+        assert results['service_type'] == 'login'
+        assert results['fallback_to_local'] == 'yes'

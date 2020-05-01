@@ -100,15 +100,21 @@ class Parameters(AnsibleF5Parameters):
     }
 
     api_attributes = [
-        'synchronizeZoneFiles', 'synchronizationGroupName', 'synchronization',
+        'synchronizeZoneFiles',
+        'synchronizationGroupName',
+        'synchronization',
     ]
 
     returnables = [
-        'synchronization', 'synchronization_group_name', 'synchronize_zone_files',
+        'synchronization',
+        'synchronization_group_name',
+        'synchronize_zone_files',
     ]
 
     updatables = [
-        'synchronization', 'synchronization_group_name', 'synchronize_zone_files',
+        'synchronization',
+        'synchronization_group_name',
+        'synchronize_zone_files',
     ]
 
 
@@ -289,11 +295,9 @@ class ModuleManager(object):
         except ValueError as ex:
             raise F5ModuleError(str(ex))
 
-        if 'code' in response and response['code'] == 400:
-            if 'message' in response:
-                raise F5ModuleError(response['message'])
-            else:
-                raise F5ModuleError(resp.content)
+        if resp.status in [200, 201] or 'code' in response and response['code'] in [200, 201]:
+            return True
+        raise F5ModuleError(resp.content)
 
     def read_current_from_device(self):
         uri = "https://{0}:{1}/mgmt/tm/gtm/global-settings/general/".format(
@@ -306,12 +310,9 @@ class ModuleManager(object):
         except ValueError as ex:
             raise F5ModuleError(str(ex))
 
-        if 'code' in response and response['code'] == 400:
-            if 'message' in response:
-                raise F5ModuleError(response['message'])
-            else:
-                raise F5ModuleError(resp.content)
-        return ApiParameters(params=response)
+        if resp.status in [200, 201] or 'code' in response and response['code'] in [200, 201]:
+            return ApiParameters(params=response)
+        raise F5ModuleError(resp.content)
 
 
 class ArgumentSpec(object):
