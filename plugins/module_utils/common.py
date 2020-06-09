@@ -14,14 +14,26 @@ import datetime
 from ansible.module_utils._text import to_text
 from ansible.module_utils.basic import env_fallback
 from ansible.module_utils.connection import exec_command
-from ansible.module_utils.network.common.config import NetworkConfig, ConfigLine, ignore_line
-from ansible.module_utils.network.common.utils import to_list
-from ansible.module_utils.network.common.utils import ComplexList
 from ansible.module_utils.six import iteritems
-from ansible.module_utils.parsing.convert_bool import BOOLEANS_TRUE
-from ansible.module_utils.parsing.convert_bool import BOOLEANS_FALSE
+from ansible.module_utils.parsing.convert_bool import (
+    BOOLEANS_TRUE, BOOLEANS_FALSE
+)
 from collections import defaultdict
 
+try:
+    from ansible_collections.ansible.netcommon.plugins.module_utils.network.common.config import (
+        NetworkConfig, ConfigLine, ignore_line
+    )
+    from ansible_collections.ansible.netcommon.plugins.module_utils.network.common.utils import (
+        to_list, ComplexList
+    )
+except ImportError:
+    from ansible.module_utils.network.common.config import (
+        NetworkConfig, ConfigLine, ignore_line
+    )
+    from ansible.module_utils.network.common.utils import (
+        to_list, ComplexList
+    )
 
 MANAGED_BY_ANNOTATION_VERSION = 'f5-ansible.version'
 MANAGED_BY_ANNOTATION_MODIFIED = 'f5-ansible.last_modified'
@@ -47,16 +59,13 @@ f5_provider_spec = {
         aliases=['pass', 'pwd'],
         fallback=(env_fallback, ['F5_PASSWORD', 'ANSIBLE_NET_PASSWORD']),
     ),
-    'ssh_keyfile': dict(
-        type='path'
-    ),
     'validate_certs': dict(
         type='bool',
         default='yes',
         fallback=(env_fallback, ['F5_VALIDATE_CERTS'])
     ),
     'transport': dict(
-        choices=['cli', 'rest'],
+        choices=['rest'],
         default='rest'
     ),
     'timeout': dict(type='int'),
@@ -187,7 +196,7 @@ def flatten_boolean(value):
 
 
 def is_cli(module):
-    transport = module.params['transport']
+    transport = module.params.get('transport', None)
     provider_transport = (module.params['provider'] or {}).get('transport')
     result = 'cli' in (transport, provider_transport)
     return result

@@ -7212,41 +7212,32 @@ import re
 import time
 
 from ansible.module_utils.basic import AnsibleModule
-from ansible.module_utils.network.common.utils import to_netmask
 from ansible.module_utils.parsing.convert_bool import BOOLEANS_TRUE
-from ansible.module_utils.six import iteritems
-from ansible.module_utils.six import string_types
+from ansible.module_utils.six import (
+    iteritems, string_types
+)
+
+try:
+    from ansible_collections.ansible.netcommon.plugins.module_utils.compat.ipaddress import (
+        ip_interface
+    )
+except ImportError:
+    from ansible.module_utils.compat.ipaddress import (
+        ip_interface
+    )
+
 from collections import namedtuple
 from distutils.version import LooseVersion
 
-try:
-    from library.module_utils.network.f5.bigip import F5RestClient
-    from library.module_utils.network.f5.common import F5ModuleError
-    from library.module_utils.network.f5.common import AnsibleF5Parameters
-    from library.module_utils.network.f5.common import f5_argument_spec
-    from library.module_utils.network.f5.common import fq_name
-    from library.module_utils.network.f5.common import flatten_boolean
-    from library.module_utils.network.f5.common import transform_name
-    from library.module_utils.network.f5.ipaddress import is_valid_ip
-    from library.module_utils.compat.ipaddress import ip_address
-    from library.module_utils.compat.ipaddress import ip_interface
-    from library.module_utils.network.f5.icontrol import modules_provisioned
-    from library.module_utils.network.f5.icontrol import tmos_version
-    from library.module_utils.network.f5.urls import parseStats
-except ImportError:
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.bigip import F5RestClient
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import F5ModuleError
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import AnsibleF5Parameters
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import f5_argument_spec
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import fq_name
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import flatten_boolean
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import transform_name
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.ipaddress import is_valid_ip
-    from ansible.module_utils.compat.ipaddress import ip_address
-    from ansible.module_utils.compat.ipaddress import ip_interface
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.icontrol import modules_provisioned
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.icontrol import tmos_version
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.urls import parseStats
+from ..module_utils.bigip import F5RestClient
+from ..module_utils.common import (
+    F5ModuleError, AnsibleF5Parameters, transform_name, f5_argument_spec, flatten_boolean, fq_name
+)
+from ..module_utils.urls import parseStats
+from ..module_utils.icontrol import (
+    tmos_version, modules_provisioned
+)
+from ..module_utils.ipaddress import is_valid_ip
 
 
 class BaseManager(object):
@@ -12623,9 +12614,9 @@ class SelfIpsParameters(BaseParameters):
 
     @property
     def netmask(self):
+        result = None
         parts = self._values['address'].split('/')
         if is_valid_ip(parts[0]):
-            addr = ip_address(u'{0}'.format(parts[0]))
             ip = ip_interface(u'{0}'.format(self._values['address']))
             result = ip.netmask
         return str(result)

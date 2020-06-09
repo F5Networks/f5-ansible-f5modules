@@ -905,53 +905,23 @@ clone_pools:
 import os
 import re
 
-from ansible.module_utils.basic import AnsibleModule
-from ansible.module_utils.basic import env_fallback
+from ansible.module_utils.basic import (
+    AnsibleModule, env_fallback
+)
 from ansible.module_utils.six import iteritems
 from collections import namedtuple
 
-try:
-    from library.module_utils.network.f5.bigip import F5RestClient
-    from library.module_utils.network.f5.common import MANAGED_BY_ANNOTATION_VERSION
-    from library.module_utils.network.f5.common import MANAGED_BY_ANNOTATION_MODIFIED
-    from library.module_utils.network.f5.common import F5ModuleError
-    from library.module_utils.network.f5.common import AnsibleF5Parameters
-    from library.module_utils.network.f5.common import fq_name
-    from library.module_utils.network.f5.common import f5_argument_spec
-    from library.module_utils.network.f5.common import transform_name
-    from library.module_utils.network.f5.common import mark_managed_by
-    from library.module_utils.network.f5.common import only_has_managed_metadata
-    from library.module_utils.network.f5.common import flatten_boolean
-    from library.module_utils.network.f5.common import is_empty_list
-    from library.module_utils.network.f5.compare import cmp_simple_list
-    from library.module_utils.network.f5.ipaddress import is_valid_ip
-    from library.module_utils.network.f5.ipaddress import is_valid_ip_interface
-    from library.module_utils.network.f5.ipaddress import ip_interface
-    from library.module_utils.network.f5.ipaddress import validate_ip_v6_address
-    from library.module_utils.network.f5.ipaddress import get_netmask
-    from library.module_utils.network.f5.ipaddress import compress_address
-    from library.module_utils.network.f5.icontrol import modules_provisioned
-except ImportError:
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.bigip import F5RestClient
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import MANAGED_BY_ANNOTATION_VERSION
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import MANAGED_BY_ANNOTATION_MODIFIED
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import F5ModuleError
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import AnsibleF5Parameters
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import fq_name
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import f5_argument_spec
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import transform_name
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import mark_managed_by
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import only_has_managed_metadata
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import flatten_boolean
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import is_empty_list
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.compare import cmp_simple_list
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.ipaddress import is_valid_ip
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.ipaddress import is_valid_ip_interface
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.ipaddress import ip_interface
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.ipaddress import validate_ip_v6_address
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.ipaddress import get_netmask
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.ipaddress import compress_address
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.icontrol import modules_provisioned
+from ..module_utils.bigip import F5RestClient
+from ..module_utils.common import (
+    F5ModuleError, AnsibleF5Parameters, transform_name, f5_argument_spec, flatten_boolean, fq_name,
+    only_has_managed_metadata, mark_managed_by, is_empty_list, MANAGED_BY_ANNOTATION_MODIFIED,
+    MANAGED_BY_ANNOTATION_VERSION
+)
+from ..module_utils.compare import cmp_simple_list
+from ..module_utils.icontrol import modules_provisioned
+from ..module_utils.ipaddress import (
+    is_valid_ip, is_valid_ip_interface, ip_interface, validate_ip_v6_address, get_netmask, compress_address
+)
 
 
 class Parameters(AnsibleF5Parameters):

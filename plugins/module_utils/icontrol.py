@@ -28,10 +28,7 @@ try:
 except ImportError:
     import simplejson as _json
 
-try:
-    from library.module_utils.network.f5.common import F5ModuleError
-except ImportError:
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import F5ModuleError
+from .common import F5ModuleError
 
 
 """An F5 REST API URI handler.

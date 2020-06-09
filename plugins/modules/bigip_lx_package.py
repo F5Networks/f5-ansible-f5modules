@@ -38,6 +38,12 @@ options:
     choices:
       - present
       - absent
+  retain_package_file:
+    description:
+      - Should the install file be deleted on successful installation of the package
+    type: bool
+    default: no
+    version_added: "f5_modules 1.4"
 notes:
   - Requires the rpm tool be installed on the host. This can be accomplished through
     different ways on each platform. On Debian based systems with C(apt);
@@ -83,6 +89,16 @@ EXAMPLES = r'''
       server: lb.mydomain.com
       user: admin
   delegate_to: localhost
+
+- name: Install AS3 and don't delete package file
+  bigip_lx_package:
+    package: f5-appsvcs-3.5.0-3.noarch.rpm
+    retain_package_file: yes
+    provider:
+      password: secret
+      server: lb.mydomain.com
+      user: admin
+  delegate_to: localhost
 '''
 
 RETURN = r'''
@@ -95,21 +111,13 @@ import time
 from ansible.module_utils.basic import AnsibleModule
 from ansible.module_utils.urls import urlparse
 from distutils.version import LooseVersion
-
-try:
-    from library.module_utils.network.f5.bigip import F5RestClient
-    from library.module_utils.network.f5.common import F5ModuleError
-    from library.module_utils.network.f5.common import AnsibleF5Parameters
-    from library.module_utils.network.f5.common import f5_argument_spec
-    from library.module_utils.network.f5.icontrol import tmos_version
-    from library.module_utils.network.f5.icontrol import upload_file
-except ImportError:
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.bigip import F5RestClient
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import F5ModuleError
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import AnsibleF5Parameters
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import f5_argument_spec
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.icontrol import tmos_version
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.icontrol import upload_file
+from ..module_utils.bigip import F5RestClient
+from ..module_utils.common import (
+    F5ModuleError, AnsibleF5Parameters, f5_argument_spec, flatten_boolean
+)
+from ..module_utils.icontrol import (
+    tmos_version, upload_file
+)
 
 
 class Parameters(AnsibleF5Parameters):
@@ -158,6 +166,10 @@ class Parameters(AnsibleF5Parameters):
         result = os.path.splitext(base)
         return result[0]
 
+    @property
+    def retain_package_file(self):
+        return flatten_boolean(self._values['retain_package_file'])
+
 
 class ApiParameters(Parameters):
     pass
@@ -175,7 +187,7 @@ class Changes(Parameters):
                 result[returnable] = getattr(self, returnable)
             result = self._filter_params(result)
         except Exception:
-            pass
+            raise
         return result
 
 
@@ -247,10 +259,12 @@ class ModuleManager(object):
                 raise F5ModuleError(
                     "The specified LX package was not found in {0}.".format(os.getcwd())
                 )
-        self.upload_to_device()
+        if not self.check_file_exists_on_device():
+            self.upload_to_device()
         self.create_on_device()
         self.enable_iapplx_on_device()
-        self.remove_package_file_from_device()
+        if self.want.retain_package_file == 'no':
+            self.remove_package_file_from_device()
         if self.exists():
             return True
         else:
@@ -283,11 +297,8 @@ class ModuleManager(object):
         except ValueError as ex:
             raise F5ModuleError(str(ex))
 
-        if 'code' in response and response['code'] in [400, 403]:
-            if 'message' in response:
-                raise F5ModuleError(response['message'])
-            else:
-                raise F5ModuleError(resp.content)
+        if resp.status not in [200, 201, 202] or 'code' in response and response['code'] not in [200, 201, 202]:
+            raise F5ModuleError(resp.content)
 
         path = urlparse(response["selfLink"]).path
         task = self._wait_for_task(path)
@@ -320,12 +331,9 @@ class ModuleManager(object):
         except ValueError as ex:
             raise F5ModuleError(str(ex))
 
-        if 'code' in response and response['code'] == 400:
-            if 'message' in response:
-                raise F5ModuleError(response['message'])
-            else:
-                raise F5ModuleError(resp.content)
-        return response
+        if resp.status in [200, 201, 202] or 'code' in response and response['code'] in [200, 201, 202]:
+            return response
+        raise F5ModuleError(resp.content)
 
     def upload_to_device(self):
         url = 'https://{0}:{1}/mgmt/shared/file-transfer/uploads'.format(
@@ -338,6 +346,27 @@ class ModuleManager(object):
             raise F5ModuleError(
                 "Failed to upload the file."
             )
+
+    def check_file_exists_on_device(self):
+        params = dict(
+            command="run",
+            utilCmdArgs="/var/config/rest/downloads/{0}".format(self.want.package_file)
+        )
+        uri = "https://{0}:{1}/mgmt/tm/util/unix-ls".format(
+            self.client.provider['server'],
+            self.client.provider['server_port']
+        )
+        resp = self.client.api.post(uri, json=params)
+        try:
+            response = resp.json()
+        except ValueError as ex:
+            raise F5ModuleError(str(ex))
+
+        if resp.status in [200, 201] or 'code' in response and response['code'] in [200, 201]:
+            if 'commandResult' in response and self.want.package_file in response['commandResult']:
+                return True
+            return False
+        raise F5ModuleError(resp.content)
 
     def remove_package_file_from_device(self):
         params = dict(
@@ -353,11 +382,10 @@ class ModuleManager(object):
             response = resp.json()
         except ValueError as ex:
             raise F5ModuleError(str(ex))
-        if 'code' in response and response['code'] in [400, 403]:
-            if 'message' in response:
-                raise F5ModuleError(response['message'])
-            else:
-                raise F5ModuleError(resp.content)
+
+        if resp.status in [200, 201, 202] or 'code' in response and response['code'] in [200, 201, 202]:
+            return True
+        raise F5ModuleError(resp.content)
 
     def create_on_device(self):
         remote_path = "/var/config/rest/downloads/{0}".format(self.want.package_file)
@@ -376,11 +404,8 @@ class ModuleManager(object):
         except ValueError as ex:
             raise F5ModuleError(str(ex))
 
-        if 'code' in response and response['code'] in [400, 403]:
-            if 'message' in response:
-                raise F5ModuleError(response['message'])
-            else:
-                raise F5ModuleError(resp.content)
+        if resp.status not in [200, 201, 202] or 'code' in response and response['code'] not in [200, 201, 202]:
+            raise F5ModuleError(resp.content)
 
         path = urlparse(response["selfLink"]).path
         task = self._wait_for_task(path)
@@ -407,11 +432,8 @@ class ModuleManager(object):
         except ValueError as ex:
             raise F5ModuleError(str(ex))
 
-        if 'code' in response and response['code'] in [400, 403]:
-            if 'message' in response:
-                raise F5ModuleError(response['message'])
-            else:
-                raise F5ModuleError(resp.content)
+        if resp.status not in [200, 201, 202] or 'code' in response and response['code'] not in [200, 201, 202]:
+            raise F5ModuleError(resp.content)
 
         path = urlparse(response["selfLink"]).path
         task = self._wait_for_task(path)
@@ -434,11 +456,10 @@ class ModuleManager(object):
             response = resp.json()
         except ValueError as ex:
             raise F5ModuleError(str(ex))
-        if 'code' in response and response['code'] in [400, 403]:
-            if 'message' in response:
-                raise F5ModuleError(response['message'])
-            else:
-                raise F5ModuleError(resp.content)
+
+        if resp.status in [200, 201, 202] or 'code' in response and response['code'] in [200, 201, 202]:
+            return True
+        raise F5ModuleError(resp.content)
 
 
 class ArgumentSpec(object):
@@ -449,7 +470,11 @@ class ArgumentSpec(object):
                 default='present',
                 choices=['present', 'absent']
             ),
-            package=dict(type='path')
+            package=dict(type='path'),
+            retain_package_file=dict(
+                default='no',
+                type='bool'
+            ),
         )
         self.argument_spec = {}
         self.argument_spec.update(f5_argument_spec)

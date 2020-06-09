@@ -401,28 +401,15 @@ cache_timeout:
 
 import os
 
-from ansible.module_utils.basic import AnsibleModule
-from ansible.module_utils.basic import env_fallback
+from ansible.module_utils.basic import (
+    AnsibleModule, env_fallback
+)
 from ansible.module_utils.six import iteritems
 
-try:
-    from library.module_utils.network.f5.bigip import F5RestClient
-    from library.module_utils.network.f5.common import F5ModuleError
-    from library.module_utils.network.f5.common import AnsibleF5Parameters
-    from library.module_utils.network.f5.common import fq_name
-    from library.module_utils.network.f5.common import f5_argument_spec
-    from library.module_utils.network.f5.common import flatten_boolean
-    from library.module_utils.network.f5.common import transform_name
-    from library.module_utils.network.f5.common import is_empty_list
-except ImportError:
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.bigip import F5RestClient
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import F5ModuleError
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import AnsibleF5Parameters
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import fq_name
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import f5_argument_spec
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import flatten_boolean
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import transform_name
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import is_empty_list
+from ..module_utils.bigip import F5RestClient
+from ..module_utils.common import (
+    F5ModuleError, AnsibleF5Parameters, transform_name, f5_argument_spec, flatten_boolean, fq_name, is_empty_list
+)
 
 
 class Parameters(AnsibleF5Parameters):
@@ -551,7 +538,7 @@ class ModuleParameters(Parameters):
             return name + '.crt'
 
     def _get_chain_value(self, item, true_name):
-        if 'chain' not in item or item['chain'] == 'none':
+        if 'chain' not in item or item['chain'] in ('none', None, 'None'):
             result = 'none'
         else:
             result = self._cert_filename(fq_name(self.partition, item['chain']), true_name)
@@ -601,10 +588,8 @@ class ModuleParameters(Parameters):
                 'key': fq_name(self.partition, key),
                 'chain': chain
             }
-            if 'passphrase' in item:
+            if 'passphrase' in item and item['passphrase'] not in ('None', None, 'none'):
                 tmp['passphrase'] = item['passphrase']
-            if 'true_names' in item:
-                tmp['true_names'] = item['true_names']
             result.append(tmp)
         result = sorted(result, key=lambda x: x['name'])
         return result

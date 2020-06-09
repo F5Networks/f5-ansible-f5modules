@@ -116,20 +116,11 @@ try:
 except ImportError:
     import urllib.parse as urlparse
 
-try:
-    from library.module_utils.network.f5.bigip import F5RestClient
-    from library.module_utils.network.f5.common import F5ModuleError
-    from library.module_utils.network.f5.common import AnsibleF5Parameters
-    from library.module_utils.network.f5.common import f5_argument_spec
-    from library.module_utils.network.f5.common import transform_name
-    from library.module_utils.network.f5.icontrol import download_file
-except ImportError:
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.bigip import F5RestClient
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import F5ModuleError
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import AnsibleF5Parameters
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import f5_argument_spec
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import transform_name
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.icontrol import download_file
+from ..module_utils.bigip import F5RestClient
+from ..module_utils.common import (
+    F5ModuleError, AnsibleF5Parameters, transform_name, f5_argument_spec
+)
+from ..module_utils.icontrol import download_file
 
 
 class Parameters(AnsibleF5Parameters):

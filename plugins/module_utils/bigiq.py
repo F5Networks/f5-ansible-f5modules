@@ -9,17 +9,10 @@ __metaclass__ = type
 
 import os
 
-
-try:
-    from library.module_utils.network.f5.common import F5BaseClient
-    from library.module_utils.network.f5.common import F5ModuleError
-    from library.module_utils.network.f5.common import is_ansible_debug
-    from library.module_utils.network.f5.icontrol import iControlRestSession
-except ImportError:
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import F5BaseClient
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import F5ModuleError
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import is_ansible_debug
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.icontrol import iControlRestSession
+from .common import (
+    F5BaseClient, F5ModuleError
+)
+from .icontrol import iControlRestSession
 
 
 class F5RestClient(F5BaseClient):

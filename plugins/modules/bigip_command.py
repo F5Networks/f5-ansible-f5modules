@@ -79,17 +79,6 @@ options:
         trying the command again.
     type: int
     default: 1
-  transport:
-    description:
-      - Configures the transport connection to use when connecting to the
-        remote device. The transport argument supports connectivity to the
-        device over cli (ssh) or rest.
-    type: str
-    choices:
-        - rest
-        - cli
-    default: rest
-    version_added: 2.5
   warn:
     description:
       - Whether the module should raise warnings related to command idempotency
@@ -105,7 +94,7 @@ options:
       - Change into this directory before running the command.
     type: str
     version_added: 2.6
-extends_documentation_fragment: f5networks.f5_modules.f5
+extends_documentation_fragment: f5networks.f5_modules.f5_rest_cli
 author:
   - Tim Rupp (@caphrim007)
   - Wojciech Wypior (@wojtek0806)
@@ -204,33 +193,37 @@ warn:
   sample: True
 '''
 
+import copy
 import re
 import time
 
 from ansible.module_utils.basic import AnsibleModule
-from ansible.module_utils.network.common.parsing import FailedConditionsError
-from ansible.module_utils.network.common.parsing import Conditional
-from ansible.module_utils.network.common.utils import ComplexList
-from ansible.module_utils.network.common.utils import to_list
 from ansible.module_utils.six import string_types
+
+try:
+    from ansible_collections.ansible.netcommon.plugins.module_utils.network.common.parsing import (
+        FailedConditionsError, Conditional
+    )
+    from ansible_collections.ansible.netcommon.plugins.module_utils.network.common.utils import (
+        ComplexList, to_list
+    )
+except ImportError:
+    from ansible.module_utils.network.common.parsing import (
+        FailedConditionsError, Conditional
+    )
+    from ansible.module_utils.network.common.utils import (
+        ComplexList, to_list
+    )
+
 from collections import deque
 
+from ..module_utils.bigip import F5RestClient
+from ..module_utils.common import (
+    F5ModuleError, AnsibleF5Parameters, f5_argument_spec, is_cli
+)
 
 try:
-    from library.module_utils.network.f5.bigip import F5RestClient
-    from library.module_utils.network.f5.common import F5ModuleError
-    from library.module_utils.network.f5.common import AnsibleF5Parameters
-    from library.module_utils.network.f5.common import f5_argument_spec
-    from library.module_utils.network.f5.common import is_cli
-except ImportError:
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.bigip import F5RestClient
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import F5ModuleError
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import AnsibleF5Parameters
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import f5_argument_spec
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import is_cli
-
-try:
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import run_commands
+    from .module_utils.common import run_commands
     HAS_CLI_TRANSPORT = True
 except ImportError:
     HAS_CLI_TRANSPORT = False
@@ -688,19 +681,28 @@ class ArgumentSpec(object):
                 default=1,
                 type='int'
             ),
-            transport=dict(
-                type='str',
-                default='rest',
-                choices=['cli', 'rest']
-            ),
             warn=dict(
                 type='bool',
                 default='yes'
             ),
             chdir=dict()
         )
+        # required to add CLI to choices and ssh_keyfile as per documentation
+        provider_update = dict(
+            transport=dict(
+                type='str',
+                default='rest',
+                choices=['cli', 'rest']
+            ),
+            ssh_keyfile=dict(
+                type='path'
+            ),
+
+        )
+        new_spec = copy.deepcopy(f5_argument_spec)
         self.argument_spec = {}
-        self.argument_spec.update(f5_argument_spec)
+        self.argument_spec.update(new_spec)
+        self.argument_spec['provider']['options'].update(provider_update)
         self.argument_spec.update(argument_spec)
 
 

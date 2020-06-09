@@ -240,35 +240,27 @@ fw_enforced_policy:
 
 import re
 
-from ansible.module_utils.basic import AnsibleModule
-from ansible.module_utils.basic import env_fallback
+
+from ansible.module_utils.basic import (
+    AnsibleModule, env_fallback
+)
 
 try:
-    from library.module_utils.network.f5.bigip import F5RestClient
-    from library.module_utils.network.f5.common import F5ModuleError
-    from library.module_utils.network.f5.common import AnsibleF5Parameters
-    from library.module_utils.network.f5.common import fq_name
-    from library.module_utils.network.f5.common import f5_argument_spec
-    from library.module_utils.network.f5.common import transform_name
-    from library.module_utils.network.f5.ipaddress import is_valid_ip
-    from library.module_utils.network.f5.ipaddress import ipv6_netmask_to_cidr
-    from library.module_utils.compat.ipaddress import ip_address
-    from library.module_utils.compat.ipaddress import ip_network
-    from library.module_utils.compat.ipaddress import ip_interface
-    from library.module_utils.network.f5.compare import cmp_str_with_none
+    from ansible_collections.ansible.netcommon.plugins.module_utils.compat.ipaddress import (
+        ip_network, ip_interface, ip_address
+    )
 except ImportError:
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.bigip import F5RestClient
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import F5ModuleError
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import AnsibleF5Parameters
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import fq_name
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import f5_argument_spec
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import transform_name
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.ipaddress import is_valid_ip
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.ipaddress import ipv6_netmask_to_cidr
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.compare import cmp_str_with_none
-    from ansible.module_utils.compat.ipaddress import ip_address
-    from ansible.module_utils.compat.ipaddress import ip_network
-    from ansible.module_utils.compat.ipaddress import ip_interface
+    from ansible.module_utils.compat.ipaddress import (
+        ip_network, ip_interface, ip_address
+    )
+from ..module_utils.bigip import F5RestClient
+from ..module_utils.common import (
+    F5ModuleError, AnsibleF5Parameters, transform_name, f5_argument_spec, fq_name
+)
+from ..module_utils.compare import cmp_str_with_none
+from ..module_utils.ipaddress import (
+    is_valid_ip, ipv6_netmask_to_cidr
+)
 
 
 class Parameters(AnsibleF5Parameters):

@@ -173,27 +173,16 @@ import os
 import time
 import tempfile
 
-from ansible.module_utils.basic import AnsibleModule
-from ansible.module_utils.basic import env_fallback
-
-try:
-    from library.module_utils.network.f5.bigip import F5RestClient
-    from library.module_utils.network.f5.common import F5ModuleError
-    from library.module_utils.network.f5.common import AnsibleF5Parameters
-    from library.module_utils.network.f5.common import fq_name
-    from library.module_utils.network.f5.common import f5_argument_spec
-    from library.module_utils.network.f5.common import flatten_boolean
-    from library.module_utils.network.f5.icontrol import download_asm_file
-    from library.module_utils.network.f5.icontrol import module_provisioned
-except ImportError:
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.bigip import F5RestClient
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import F5ModuleError
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import AnsibleF5Parameters
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import fq_name
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import f5_argument_spec
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import flatten_boolean
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.icontrol import download_asm_file
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.icontrol import module_provisioned
+from ansible.module_utils.basic import (
+    AnsibleModule, env_fallback
+)
+from ..module_utils.bigip import F5RestClient
+from ..module_utils.common import (
+    F5ModuleError, AnsibleF5Parameters, f5_argument_spec, flatten_boolean, fq_name
+)
+from ..module_utils.icontrol import (
+    module_provisioned, download_asm_file
+)
 
 
 class Parameters(AnsibleF5Parameters):
@@ -335,7 +324,7 @@ class Changes(Parameters):
                 result[returnable] = getattr(self, returnable)
             result = self._filter_params(result)
         except Exception:
-            pass
+            raise
         return result
 
 

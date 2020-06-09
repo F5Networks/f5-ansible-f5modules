@@ -314,29 +314,16 @@ recv_row:
   sample: 1
 '''
 
-from ansible.module_utils.basic import AnsibleModule
-from ansible.module_utils.basic import env_fallback
+from ansible.module_utils.basic import (
+    AnsibleModule, env_fallback
+)
 
-try:
-    from library.module_utils.network.f5.bigip import F5RestClient
-    from library.module_utils.network.f5.common import F5ModuleError
-    from library.module_utils.network.f5.common import AnsibleF5Parameters
-    from library.module_utils.network.f5.common import fq_name
-    from library.module_utils.network.f5.common import transform_name
-    from library.module_utils.network.f5.common import flatten_boolean
-    from library.module_utils.network.f5.common import f5_argument_spec
-    from library.module_utils.network.f5.ipaddress import is_valid_ip
-    from library.module_utils.network.f5.compare import cmp_str_with_none
-except ImportError:
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.bigip import F5RestClient
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import F5ModuleError
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import AnsibleF5Parameters
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import fq_name
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import transform_name
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import f5_argument_spec
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import flatten_boolean
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.ipaddress import is_valid_ip
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.compare import cmp_str_with_none
+from ..module_utils.bigip import F5RestClient
+from ..module_utils.common import (
+    F5ModuleError, AnsibleF5Parameters, transform_name, f5_argument_spec, flatten_boolean
+)
+from ..module_utils.compare import cmp_str_with_none
+from ..module_utils.ipaddress import is_valid_ip
 
 
 class Parameters(AnsibleF5Parameters):
@@ -475,12 +462,6 @@ class ModuleParameters(Parameters):
             return 'disabled'
 
     @property
-    def time_until_up(self):
-        if self._values['time_until_up'] is None:
-            return None
-        return int(self._values['time_until_up'])
-
-    @property
     def debug(self):
         return flatten_boolean(self._values['debug'])
 
@@ -548,19 +529,6 @@ class ModuleParameters(Parameters):
             )
         return self._values['time_until_up']
 
-    @property
-    def manual_resume(self):
-        result = flatten_boolean(self._values['manual_resume'])
-        if result == 'yes':
-            return 'enabled'
-        if result == 'no':
-            return 'disabled'
-
-    @property
-    def debug(self):
-        result = flatten_boolean(self._values['debug'])
-        return result
-
 
 class Changes(Parameters):
     def to_return(self):
@@ -570,7 +538,7 @@ class Changes(Parameters):
                 result[returnable] = getattr(self, returnable)
             result = self._filter_params(result)
         except Exception:
-            pass
+            raise
         return result
 
 

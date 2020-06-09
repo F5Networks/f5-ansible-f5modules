@@ -127,6 +127,7 @@ options:
 extends_documentation_fragment: f5networks.f5_modules.f5
 author:
   - Wojciech Wypior (@wojtek0806)
+  - Nitin Khanna (@nitinthewiz)
 '''
 
 EXAMPLES = r'''
@@ -212,27 +213,16 @@ force:
 
 import os
 import time
-from ansible.module_utils.basic import AnsibleModule
-from ansible.module_utils.basic import env_fallback
-
-try:
-    from library.module_utils.network.f5.bigip import F5RestClient
-    from library.module_utils.network.f5.common import F5ModuleError
-    from library.module_utils.network.f5.common import AnsibleF5Parameters
-    from library.module_utils.network.f5.common import fq_name
-    from library.module_utils.network.f5.common import flatten_boolean
-    from library.module_utils.network.f5.common import f5_argument_spec
-    from library.module_utils.network.f5.icontrol import upload_file
-    from library.module_utils.network.f5.icontrol import module_provisioned
-except ImportError:
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.bigip import F5RestClient
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import F5ModuleError
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import AnsibleF5Parameters
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import fq_name
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import flatten_boolean
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import f5_argument_spec
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.icontrol import upload_file
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.icontrol import module_provisioned
+from ansible.module_utils.basic import (
+    AnsibleModule, env_fallback
+)
+from ..module_utils.bigip import F5RestClient
+from ..module_utils.common import (
+    F5ModuleError, AnsibleF5Parameters, f5_argument_spec, flatten_boolean, fq_name
+)
+from ..module_utils.icontrol import (
+    module_provisioned, upload_file
+)
 
 
 class Parameters(AnsibleF5Parameters):
@@ -312,7 +302,7 @@ class Changes(Parameters):
                 result[returnable] = getattr(self, returnable)
             result = self._filter_params(result)
         except Exception:
-            pass
+            raise
         return result
 
 
@@ -429,7 +419,6 @@ class ModuleManager(object):
             return True
         self._clear_changes()
         self.import_file_to_device()
-        self.remove_temp_policy_from_device()
         return True
 
     def exists(self):
@@ -452,7 +441,7 @@ class ModuleManager(object):
         return False
 
     def upload_file_to_device(self, content, name):
-        url = 'https://{0}:{1}/mgmt/shared/file-transfer/uploads'.format(
+        url = 'https://{0}:{1}/mgmt/tm/asm/file-transfer/uploads'.format(
             self.client.provider['server'],
             self.client.provider['server_port']
         )
@@ -485,6 +474,8 @@ class ModuleManager(object):
     def inline_import(self):
         params = self.changes.api_params()
         params['name'] = fq_name(self.want.partition, self.want.name)
+        if self.want.source:
+            params['filename'] = os.path.split(self.want.source)[1]
         uri = "https://{0}:{1}/mgmt/tm/asm/tasks/import-policy/".format(
             self.client.provider['server'],
             self.client.provider['server_port'],
@@ -538,55 +529,9 @@ class ModuleManager(object):
         self.upload_file_to_device(self.want.source, name)
         time.sleep(2)
 
-        full_name = fq_name(self.want.partition, self.want.name)
-
-        if self.want.force:
-            cmd = 'tmsh load asm policy {0} file /var/config/rest/downloads/{1} overwrite'.format(full_name, name)
-        else:
-            cmd = 'tmsh load asm policy {0} file /var/config/rest/downloads/{1}'.format(full_name, name)
-
-        uri = "https://{0}:{1}/mgmt/tm/util/bash/".format(
-            self.client.provider['server'],
-            self.client.provider['server_port'],
-        )
-        args = dict(
-            command='run',
-            utilCmdArgs='-c "{0}"'.format(cmd)
-        )
-        resp = self.client.api.post(uri, json=args)
-
-        try:
-            response = resp.json()
-            if 'commandResult' in response:
-                if 'Error' in response['commandResult'] or 'error' in response['commandResult']:
-                    raise F5ModuleError(response['commandResult'])
-        except ValueError as ex:
-            raise F5ModuleError(str(ex))
-
-        if resp.status in [200, 201] or 'code' in response and response['code'] in [200, 201]:
-            return True
-        raise F5ModuleError(resp.content)
-
-    def remove_temp_policy_from_device(self):
-        name = os.path.split(self.want.source)[1]
-        tpath_name = '/var/config/rest/downloads/{0}'.format(name)
-        uri = "https://{0}:{1}/mgmt/tm/util/unix-rm/".format(
-            self.client.provider['server'],
-            self.client.provider['server_port'],
-        )
-        args = dict(
-            command='run',
-            utilCmdArgs=tpath_name
-        )
-        resp = self.client.api.post(uri, json=args)
-        try:
-            response = resp.json()
-        except ValueError as ex:
-            raise F5ModuleError(str(ex))
-
-        if resp.status in [200, 201] or 'code' in response and response['code'] in [200, 201]:
-            return True
-        raise F5ModuleError(resp.content)
+        task = self.inline_import()
+        self.wait_for_task(task)
+        return True
 
 
 class ArgumentSpec(object):

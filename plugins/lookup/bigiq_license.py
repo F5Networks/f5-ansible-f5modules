@@ -39,8 +39,8 @@ RETURN = """
 import random
 
 from ansible.errors import AnsibleError
-from ansible_collections.f5networks.f5_modules.plugins.module_utils.bigiq import F5RestClient
 from ansible.plugins.lookup import LookupBase
+from ansible_collections.f5networks.f5_modules.plugins.module_utils.bigiq import F5RestClient
 
 
 class LookupModule(LookupBase):

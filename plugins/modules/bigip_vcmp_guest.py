@@ -228,28 +228,22 @@ vlans:
 
 import time
 
-from ansible.module_utils.basic import AnsibleModule
-from ansible.module_utils.basic import env_fallback
+from ansible.module_utils.basic import (
+    AnsibleModule, env_fallback
+)
 from collections import namedtuple
 
 try:
-    from library.module_utils.network.f5.bigip import F5RestClient
-    from library.module_utils.network.f5.common import F5ModuleError
-    from library.module_utils.network.f5.common import AnsibleF5Parameters
-    from library.module_utils.network.f5.common import fq_name
-    from library.module_utils.network.f5.common import f5_argument_spec
-    from library.module_utils.network.f5.urls import parseStats
-    from library.module_utils.network.f5.ipaddress import is_valid_ip
-    from library.module_utils.compat.ipaddress import ip_interface
+    from ansible_collections.ansible.netcommon.plugins.module_utils.compat.ipaddress import ip_interface
 except ImportError:
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.bigip import F5RestClient
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import F5ModuleError
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import AnsibleF5Parameters
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import fq_name
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import f5_argument_spec
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.urls import parseStats
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.ipaddress import is_valid_ip
     from ansible.module_utils.compat.ipaddress import ip_interface
+
+from ..module_utils.bigip import F5RestClient
+from ..module_utils.common import (
+    F5ModuleError, AnsibleF5Parameters, fq_name, f5_argument_spec
+)
+from ..module_utils.ipaddress import is_valid_ip
+from ..module_utils.urls import parseStats
 
 
 class Parameters(AnsibleF5Parameters):

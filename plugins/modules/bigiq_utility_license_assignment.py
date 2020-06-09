@@ -25,7 +25,7 @@ options:
   unit_of_measure:
     description:
       - Sets the rate at which this license usage is billed.
-      - Depending on your license, you may have different units of measures
+      - Depending on your license, you may have different unit of measures
         available to you. If a particular unit is not available to you, the module
         will notify you at licensing time.
     type: str
@@ -146,18 +146,11 @@ import re
 
 from ansible.module_utils.basic import AnsibleModule
 
-try:
-    from library.module_utils.network.f5.bigiq import F5RestClient
-    from library.module_utils.network.f5.common import F5ModuleError
-    from library.module_utils.network.f5.common import AnsibleF5Parameters
-    from library.module_utils.network.f5.common import f5_argument_spec
-    from library.module_utils.network.f5.ipaddress import is_valid_ip
-except ImportError:
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.bigiq import F5RestClient
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import F5ModuleError
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import AnsibleF5Parameters
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import f5_argument_spec
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.ipaddress import is_valid_ip
+from ..module_utils.bigip import F5RestClient
+from ..module_utils.common import (
+    F5ModuleError, AnsibleF5Parameters, f5_argument_spec
+)
+from ..module_utils.ipaddress import is_valid_ip
 
 
 class Parameters(AnsibleF5Parameters):

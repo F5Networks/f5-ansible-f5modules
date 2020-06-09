@@ -17,7 +17,7 @@ DOCUMENTATION = r'''
 module: bigip_device_auth_radius
 short_description: Manages RADIUS auth configuration on BIGIP device
 description:
-  - Module creates RADIUS RADIUS configuration.
+  - Module creates RADIUS configuration.
 version_added: "f5_modules 1.3"
 options:
   servers:
@@ -145,24 +145,10 @@ accounting_bug:
 
 from ansible.module_utils.basic import AnsibleModule
 
-try:
-    from library.module_utils.network.f5.bigip import F5RestClient
-    from library.module_utils.network.f5.common import F5ModuleError
-    from library.module_utils.network.f5.common import AnsibleF5Parameters
-    from library.module_utils.network.f5.common import fq_name
-    from library.module_utils.network.f5.common import transform_name
-    from library.module_utils.network.f5.common import f5_argument_spec
-    from library.module_utils.network.f5.common import flatten_boolean
-    from library.module_utils.network.f5.common import is_empty_list
-except ImportError:
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.bigip import F5RestClient
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import F5ModuleError
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import AnsibleF5Parameters
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import fq_name
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import transform_name
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import f5_argument_spec
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import flatten_boolean
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import is_empty_list
+from ..module_utils.bigip import F5RestClient
+from ..module_utils.common import (
+    F5ModuleError, AnsibleF5Parameters, transform_name, f5_argument_spec, flatten_boolean, fq_name, is_empty_list
+)
 
 
 class Parameters(AnsibleF5Parameters):

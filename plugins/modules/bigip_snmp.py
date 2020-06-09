@@ -130,19 +130,14 @@ from ansible.module_utils.basic import AnsibleModule
 from ansible.module_utils.six import string_types
 
 try:
-    from library.module_utils.network.f5.bigip import F5RestClient
-    from library.module_utils.network.f5.common import F5ModuleError
-    from library.module_utils.network.f5.common import AnsibleF5Parameters
-    from library.module_utils.network.f5.common import f5_argument_spec
-    from library.module_utils.compat.ipaddress import ip_network
-    from library.module_utils.network.f5.common import is_valid_hostname
+    from ansible_collections.ansible.netcommon.plugins.module_utils.compat.ipaddress import ip_network
 except ImportError:
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.bigip import F5RestClient
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import F5ModuleError
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import AnsibleF5Parameters
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import f5_argument_spec
     from ansible.module_utils.compat.ipaddress import ip_network
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import is_valid_hostname
+
+from ..module_utils.bigip import F5RestClient
+from ..module_utils.common import (
+    F5ModuleError, AnsibleF5Parameters, f5_argument_spec, is_valid_hostname
+)
 
 
 class Parameters(AnsibleF5Parameters):

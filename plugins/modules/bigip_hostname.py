@@ -53,16 +53,10 @@ hostname:
 
 from ansible.module_utils.basic import AnsibleModule
 
-try:
-    from library.module_utils.network.f5.bigip import F5RestClient
-    from library.module_utils.network.f5.common import F5ModuleError
-    from library.module_utils.network.f5.common import AnsibleF5Parameters
-    from library.module_utils.network.f5.common import f5_argument_spec
-except ImportError:
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.bigip import F5RestClient
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import F5ModuleError
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import AnsibleF5Parameters
-    from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import f5_argument_spec
+from ..module_utils.bigip import F5RestClient
+from ..module_utils.common import (
+    F5ModuleError, AnsibleF5Parameters, f5_argument_spec
+)
 
 
 class Parameters(AnsibleF5Parameters):
@@ -72,9 +66,12 @@ class Parameters(AnsibleF5Parameters):
 
     def to_return(self):
         result = {}
-        for returnable in self.returnables:
-            result[returnable] = getattr(self, returnable)
-        result = self._filter_params(result)
+        try:
+            for returnable in self.returnables:
+                result[returnable] = getattr(self, returnable)
+            result = self._filter_params(result)
+        except Exception:
+            raise
         return result
 
     @property
@@ -188,12 +185,9 @@ class ModuleManager(object):
         except ValueError as ex:
             raise F5ModuleError(str(ex))
 
-        if 'code' in response and response['code'] == 400:
-            if 'message' in response:
-                raise F5ModuleError(response['message'])
-            else:
-                raise F5ModuleError(resp.content)
-        return response
+        if resp.status in [200, 201] or 'code' in response and response['code'] in [200, 201]:
+            return response
+        raise F5ModuleError(resp.content)
 
     def read_current_from_device(self):
         result = self._read_global_settings_from_device()
@@ -207,16 +201,11 @@ class ModuleManager(object):
         except ValueError as ex:
             raise F5ModuleError(str(ex))
 
-        if 'code' in response and response['code'] == 400:
-            if 'message' in response:
-                raise F5ModuleError(response['message'])
-            else:
-                raise F5ModuleError(resp.content)
-
-        self_device = next((x['name'] for x in response['items'] if x['selfDevice'] == "true"), None)
-        result['self_device'] = self_device
-
-        return ApiParameters(params=result)
+        if resp.status in [200, 201] or 'code' in response and response['code'] in [200, 201]:
+            self_device = next((x['name'] for x in response['items'] if x['selfDevice'] == "true"), None)
+            result['self_device'] = self_device
+            return ApiParameters(params=result)
+        raise F5ModuleError(resp.content)
 
     def update(self):
         self.have = self.read_current_from_device()
@@ -245,11 +234,8 @@ class ModuleManager(object):
         except ValueError as ex:
             raise F5ModuleError(str(ex))
 
-        if 'code' in response and response['code'] == 400:
-            if 'message' in response:
-                raise F5ModuleError(response['message'])
-            else:
-                raise F5ModuleError(resp.content)
+        if resp.status not in [200, 201] or 'code' in response and response['code'] not in [200, 201]:
+            raise F5ModuleError(resp.content)
 
         if self.have.self_device:
             uri = "https://{0}:{1}/mgmt/tm/cm/device".format(
@@ -268,11 +254,10 @@ class ModuleManager(object):
             except ValueError as ex:
                 raise F5ModuleError(str(ex))
 
-            if 'code' in response and response['code'] == 400:
-                if 'message' in response:
-                    raise F5ModuleError(response['message'])
-                else:
-                    raise F5ModuleError(resp.content)
+            if resp.status not in [200, 201] or 'code' in response and response['code'] not in [200, 201]:
+                raise F5ModuleError(resp.content)
+
+        return True
 
 
 class ArgumentSpec(object):
