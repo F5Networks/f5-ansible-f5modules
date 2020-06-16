@@ -13,6 +13,7 @@ build_tarball:
   tags:
     - cm-official-docker-executor
   script:
+    - apk add --no-cache build-base
     - pip install ansible
     - ansible-galaxy collection build -p ./builds
   artifacts:
@@ -26,6 +27,7 @@ test_tarball:
   dependencies:
     - build_tarball
   script:
+    - apk add --no-cache build-base
     - pip install galaxy-importer
     - export GALAXY_IMPORTER_CONFIG= $CI_PROJECT_DIR/galaxy-importer.cfg
   artifacts:
