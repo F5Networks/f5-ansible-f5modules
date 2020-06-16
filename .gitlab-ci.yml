@@ -12,8 +12,6 @@ build_tarball:
   stage: build
   tags:
     - cm-official-docker-executor
-  only:
-    - devel@f5ansible/f5_modules_collection
   script:
     - pip install ansible
     - ansible-galaxy collection build -p ./builds
@@ -25,8 +23,6 @@ test_tarball:
   stage: test
   tags:
     - cm-official-docker-executor
-  only:
-    - devel@f5ansible/f5_modules_collection
   dependencies:
     - build_tarball
   script:
