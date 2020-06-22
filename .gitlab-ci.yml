@@ -19,6 +19,8 @@ build_tarball:
   artifacts:
     paths:
       - builds/*.tar.gz
+  only:
+    - merge_requests
 
 test_tarball:
   stage: test
@@ -35,3 +37,5 @@ test_tarball:
     when: on_failure
     paths:
       - ./importer_result.json
+  only:
+    - merge_requests
