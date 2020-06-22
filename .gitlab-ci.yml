@@ -23,7 +23,7 @@ build_tarball:
 test_tarball:
   stage: test
   tags:
-    - cm-official-docker-executor
+    - azure-autoscale-runner
   dependencies:
     - build_tarball
   script:
