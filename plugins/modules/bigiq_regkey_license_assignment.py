@@ -20,7 +20,7 @@ description:
   - Manages the assignment of regkey licenses on a BIG-IQ. Assignment means that
     the license is assigned to a BIG-IP, or, it needs to be assigned to a BIG-IP.
     Additionally, this module supported revoking the assignments from BIG-IP devices.
-version_added: 2.6
+version_added: "1.0.0"
 options:
   pool:
     description:
@@ -261,7 +261,7 @@ class ModuleParameters(Parameters):
 
     @property
     def pool_id(self):
-        filter = "(name eq '{0}')".format(self.pool)
+        filter = "(name%20eq%20'{0}')".format(self.pool)
         uri = 'https://{0}:{1}/mgmt/cm/device/licensing/pool/regkey/licenses?$filter={2}&$top=1'.format(
             self.client.provider['server'],
             self.client.provider['server_port'],
