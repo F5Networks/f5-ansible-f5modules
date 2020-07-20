@@ -1,6 +1,9 @@
 ---
 image: python:3.7-alpine
 
+services:
+  - docker:dind
+
 stages:
   - build
   - test

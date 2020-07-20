@@ -18,7 +18,7 @@ module: bigip_device_auth_radius
 short_description: Manages RADIUS auth configuration on BIGIP device
 description:
   - Module creates RADIUS configuration.
-version_added: "f5_modules 1.3"
+version_added: "1.3.0"
 options:
   servers:
     description:
@@ -75,6 +75,9 @@ options:
       - absent
     default: present
 extends_documentation_fragment: f5networks.f5_modules.f5
+notes:
+  - This module is based on the command line (TMSH) configuration capabilities of radius authentication,
+    not the GUI.
 author:
   - Andrey Kashcheev (@andreykashcheev)
   - Wojciech Wypior (@wojtek0806)

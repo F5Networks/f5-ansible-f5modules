@@ -26,7 +26,7 @@ description:
     a real module has been developed to configure in the way you need.
   - If you are using this module, you should probably also be filing an issue
     to have a B(real) module created for your needs.
-version_added: 2.4
+version_added: "1.0.0"
 options:
   commands:
     description:
@@ -88,12 +88,14 @@ options:
         Ansible modules. This module should always be used as a last resort.
     default: True
     type: bool
-    version_added: 2.6
   chdir:
     description:
       - Change into this directory before running the command.
     type: str
-    version_added: 2.6
+notes:
+  - When running this module in an HA environment, via SSH connection and using a role other than C(admin)
+    or C(root), you may see a C(Change Pending) status, even if you did not make any changes.
+    This is being tracked with ID429869.
 extends_documentation_fragment: f5networks.f5_modules.f5_rest_cli
 author:
   - Tim Rupp (@caphrim007)
@@ -598,10 +600,6 @@ class V2Manager(BaseManager):
 
     """
     def _execute(self, commands):
-        command = dict(
-            command="tmsh modify cli preference pager disabled"
-        )
-        self.execute_on_device(command)
         return self.execute_on_device(commands)
 
     @property
