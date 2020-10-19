@@ -7,17 +7,12 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['stableinterface'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_network_globals
 short_description: Manage network global settings on BIG-IP
 description:
-  - Module to manage STP, Multicast, DAG, LLDP and Self Allow global settings on BIG-IP.
+  - Module to manage STP, Multicast, DAG, LLDP and Self Allow global settings on a BIG-IP.
 version_added: "1.0.0"
 options:
   stp:
@@ -32,19 +27,19 @@ options:
         type: str
       config_revision:
         description:
-          - Specifies the revision level of the MSTP configuration, only has effect when C(mode) is C(mstp).
-          - The specified number must be in the range 0 to 65535.
+          - Specifies the revision level of the MSTP configuration, when C(mode) is C(mstp).
+          - You must specify a number in the range of 0 to 65535.
         type: int
       description:
         description:
-          - User defined description.
+          - User-defined description.
         type: str
       fwd_delay:
         description:
           - The number of seconds for which an interface was blocked from forwarding network traffic after a
             reconfiguration of the spanning tree topology. This parameter has no effect when C(rstp) or C(mstp) modes
             are used, as long as all bridges in the spanning tree use the RSTP or MSTP protocol.
-          - If any legacy STP bridges are present, then neighboring bridges must fall back to the old protocol,
+          - If any legacy STP bridges are present, neighboring bridges must fall back to the old protocol,
             whose reconfiguration time is affected by the forward delay value.
           - The valid range is 4 to 30.
         type: int
@@ -52,7 +47,7 @@ options:
         description:
           - Specifies the time interval in seconds between the periodic transmissions that communicate spanning tree
             information to the adjacent bridges in the network.
-          - The hello time set by default on device is optimal in virtually all cases. F5 recommends that you do
+          - The hello time set by default on the device is optimal in virtually all cases. F5 recommends that you do
             not change the hello time.
           - The valid range is 1 to 10.
         type: int
@@ -66,7 +61,7 @@ options:
         description:
           - Specifies the maximum number of hops an MSTP packet may travel before it is discarded.
           - This option only takes effect when C(mode) is C(mstp).
-          - The number of hops must be in the range of 1 to 255 hops.
+          - The number of hops must be in the range of 1 to 255.
         type: int
       mode:
         description:
@@ -104,12 +99,12 @@ options:
         type: int
       route_lookup_timeout:
         description:
-          - Specifies maximum lifetime, in seconds, of an incomplete MFC entry.
+          - Specifies maximum lifetime of an incomplete MFC entry, in seconds.
           - The valid range is 0 - 4294967295.
         type: int
       rate_limit:
         description:
-          - When C(yes), the DB variable switchboard.maxmcastrate setting controls the multicast packet per second rate
+          - When C(yes), the DB variable C(switchboard.maxmcastrate) setting controls the multicast packet per second rate
             limiting in the switch.
         type: bool
   dag:
@@ -121,17 +116,17 @@ options:
         description:
           - Specifies whether the round robin disaggregator (DAG) on a blade can disaggregate packets to all the TMMs
             in the system or only to the TMMs local to the blade.
-          - When C(global) the DAG will disaggregate packets to all TMMs in the system.
-          - When C(local) the DAG will disaggregate packets only to the TMMs local to the blade.
+          - When C(global), the DAG will disaggregate packets to all TMMs in the system.
+          - When C(local), the DAG will disaggregate packets only to the TMMs local to the blade.
         type: str
         choices:
           - global
           - local
       icmp_hash:
         description:
-          - Specifies ICMP hash for ICMP echo request and ICMP echo reply in SW DAG.
-          - When C(icmp) ICMP echo request and ICMP echo reply are be disaggregated based on ICMP id.
-          - When C(ipicmp) ICMP echo request and ICMP echo reply are be disaggregated based on ICMP id and IP addresses.
+          - Specifies the ICMP hash for ICMP echo request and ICMP echo reply in SW DAG.
+          - When C(icmp), ICMP echo request and ICMP echo reply are disaggregated based on ICMP id.
+          - When C(ipicmp), ICMP echo request and ICMP echo reply are disaggregated based on ICMP id and IP addresses.
           - This option is only available in C(TMOS) version C(13.x) and above.
         type: str
         choices:
@@ -140,9 +135,9 @@ options:
       dag_ipv6_prefix_len:
         description:
           - Specifies whether SPDAG or IPv6 prefix DAG should be used to disaggregate IPv6 traffic when vlan cmp hash
-            is set to src-ip or dst-ip.
+            is set to C(src-ip) or C(dst-ip).
           - The valid value range is 0 - 128, with C(128) value SPAG is in use.
-          - This option is only available in C(TMOS) version C(13.x) and above.
+          - This option is only available in TMOS version C(13.x) and above.
         type: int
   lldp:
     description:
@@ -152,8 +147,8 @@ options:
       enabled:
         description:
           - Specifies the current status of LLDP.
-          - When C(yes) the LLDP is enabled globally on device.
-          - When C(no) the LLDP is disabled globally on device.
+          - When C(yes), the LLDP is enabled globally on the device.
+          - When C(no), the LLDP is disabled globally on the device.
         type: bool
       max_neighbors_per_port:
         description:
@@ -178,7 +173,7 @@ options:
         type: int
       tx_interval:
         description:
-          - Specifies the interval that devices use to send LLDP information from each of their interfaces.
+          - Specifies the interval devices use to send LLDP information from each of their interfaces.
           - The valid value range is 0 - 65535.
         type: int
   self_allow:
@@ -205,9 +200,9 @@ options:
       all:
         description:
           - Sets B(all) or B(none) ports and protocols as a system wide C(self_allow) setting.
-          - When C(yes) the self_allow allows all protocols and ports, this is the equivalent of setting B(all) option
+          - When C(yes), the self_allow allows all protocols and ports. This is the equivalent of setting B(all) option
             in C(TMSH).
-          - When C(no) the self_allow allows no protocols and ports, this is the equivalent of setting B(none) option
+          - When C(no), the self_allow allows no protocols and ports. This is the equivalent of setting B(none) option
             in C(TMSH).
         type: bool
     version_added: "1.1.0"
@@ -275,7 +270,7 @@ stp:
       type: int
       sample: 2
     description:
-      description: User defined description.
+      description: User-defined description.
       returned: changed
       type: str
       sample: My description
@@ -285,12 +280,12 @@ stp:
       type: int
       sample: 4
     hello_time:
-      description: The time interval in seconds between the periodic transmissions of spanning tree information.
+      description: The time interval at seconds between the periodic transmissions of spanning tree information.
       returned: changed
       type: int
       sample: 2
     max_age:
-      description: The number of seconds, spanning tree information received from other bridges is considered valid.
+      description: The number of seconds that spanning tree information received from other bridges is considered valid.
       returned: changed
       type: int
       sample: 30
@@ -328,7 +323,7 @@ multicast:
       type: int
       sample: 50
     route_lookup_timeout:
-      description: The maximum lifetime, in seconds, of an incomplete MFC entry.
+      description: The maximum lifetime of an incomplete MFC entry, in seconds.
       returned: changed
       type: int
       sample: 20
@@ -349,7 +344,7 @@ dag:
       type: str
       sample: local
     icmp_hash:
-      description: Specifies ICMP hash for ICMP echo request and ICMP echo reply in SW DAG.
+      description: Specifies the ICMP hash for the ICMP echo request and ICMP echo reply in SW DAG.
       returned: changed
       type: str
       sample: ipicmp
@@ -375,7 +370,7 @@ lldp:
       type: int
       sample: 128
     reinit_delay:
-      description: The maximum number of seconds to wait after reaching the TTL interval before resetting TTL timer.
+      description: The maximum number of seconds to wait before resetting the TTL timer after reaching the TTL interval.
       returned: changed
       type: int
       sample: 30
@@ -390,7 +385,7 @@ lldp:
       type: int
       sample: 10
     tx_interval:
-      description: The interval that devices use to send LLDP information from each of their interfaces.
+      description: The interval devices use to send LLDP information from each of their interfaces.
       returned: changed
       type: int
       sample: 240
@@ -423,6 +418,7 @@ self_allow:
       sample: yes
   sample: hash/dictionary of values
 '''
+from datetime import datetime
 
 from ansible.module_utils.basic import AnsibleModule
 from ansible.module_utils.six import string_types
@@ -434,6 +430,8 @@ from ..module_utils.common import (
 from ..module_utils.compare import (
     cmp_str_with_none, cmp_simple_list
 )
+from ..module_utils.icontrol import tmos_version
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -1184,6 +1182,8 @@ class ModuleManager(object):
             )
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         result = dict()
 
         changed = self.present()
@@ -1193,6 +1193,7 @@ class ModuleManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, version)
         return result
 
     def present(self):

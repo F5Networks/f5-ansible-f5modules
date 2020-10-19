@@ -7,17 +7,12 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['stableinterface'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_device_connectivity
-short_description: Manages device IP configuration settings for HA on a BIG-IP
+short_description: Manages device IP configuration settings for HA on a BIG-IP.
 description:
-  - Manages device IP configuration settings for HA on a BIG-IP. Each BIG-IP device
+  - Manages device IP configuration settings for High Availability (HA) on a BIG-IP. Each BIG-IP device
     has synchronization and failover connectivity information (IP addresses) that
     you define as part of HA pairing or clustering. This module allows you to configure
     that information.
@@ -25,7 +20,7 @@ version_added: "1.0.0"
 options:
   config_sync_ip:
     description:
-      - Local IP address that the system uses for ConfigSync operations.
+      - Local IP address the system uses for ConfigSync operations.
     type: str
   mirror_primary_address:
     description:
@@ -39,48 +34,49 @@ options:
     type: str
   unicast_failover:
     description:
-      - Desired addresses to use for failover operations. Options C(address)
-        and C(port) are supported with dictionary structure where C(address) is the
-        local IP address that the system uses for failover operations. Port
-        specifies the port that the system uses for failover operations. If C(port)
-        is not specified, the default value C(1026) will be used.  If you are
-        specifying the (recommended) management IP address, use 'management-ip' in
+      - Addresses to use for failover operations. Options C(address)
+        and C(port) are supported with dictionary structure, where C(address) is the
+        local IP address the system uses for failover operations.
+      - Port specifies the port the system uses for failover operations. If C(port)
+        is not specified, the default value C(1026) will be used.
+      - If you are specifying the (recommended) management IP address, use 'management-ip' in
         the address field.
+      - When the value is set to empty list, the parameter value is removed from device.
     type: list
-    elements: str
+    elements: dict
   failover_multicast:
     description:
-      - When C(yes), ensures that the Failover Multicast configuration is enabled
-        and if no further multicast configuration is provided, ensures that
+      - When C(yes), ensures the Failover Multicast configuration is enabled
+        and, if no further multicast configuration is provided, ensures that
         C(multicast_interface), C(multicast_address) and C(multicast_port) are
-        the defaults specified in each option's description. When C(no), ensures
-        that Failover Multicast configuration is disabled.
+        the defaults specified in the description of each option.
+      - When C(no), ensures that Failover Multicast configuration is disabled.
     type: bool
   multicast_interface:
     description:
       - Interface over which the system sends multicast messages associated
-        with failover. When C(failover_multicast) is C(yes) and this option is
-        not provided, a default of C(eth0) will be used.
+        with failover.
+      - When C(failover_multicast) is C(yes) and this option is not provided, a default of C(eth0) will be used.
     type: str
   multicast_address:
     description:
       - IP address for the system to send multicast messages associated with
-        failover. When C(failover_multicast) is C(yes) and this option is not
-        provided, a default of C(224.0.0.245) will be used.
+        failover.
+      - When C(failover_multicast) is C(yes) and this option is not provided, a default of C(224.0.0.245) will be used.
     type: str
   multicast_port:
     description:
       - Port for the system to send multicast messages associated with
-        failover. When C(failover_multicast) is C(yes) and this option is not
-        provided, a default of C(62960) will be used. This value must be between
-        0 and 65535.
+        failover.
+      - When C(failover_multicast) is C(yes) and this option is not provided, a default of C(62960) will be used.
+        This value must be between 0 and 65535.
     type: int
   cluster_mirroring:
     description:
       - Specifies whether mirroring occurs within the same cluster or between
         different clusters on a multi-bladed system.
       - This parameter is only supported on platforms that have multiple blades,
-        such as Viprion hardware. It is not supported on VE.
+        such as Viprion hardware. It is not supported on Virtual Editions (VEs).
     type: str
     choices:
       - between-clusters
@@ -160,7 +156,7 @@ cluster_mirroring:
   type: str
   sample: between-clusters
 '''
-
+from datetime import datetime
 from ansible.module_utils.basic import AnsibleModule
 from ansible.module_utils.six import iteritems
 
@@ -169,6 +165,8 @@ from ..module_utils.common import (
     F5ModuleError, AnsibleF5Parameters, transform_name, f5_argument_spec
 )
 from ..module_utils.ipaddress import is_valid_ip
+from ..module_utils.icontrol import tmos_version
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -308,7 +306,7 @@ class ModuleParameters(Parameters):
     def unicast_failover(self):
         if self._values['unicast_failover'] is None:
             return None
-        if self._values['unicast_failover'] == ['none']:
+        if not self._values['unicast_failover']:
             return []
         result = []
         for item in self._values['unicast_failover']:
@@ -506,12 +504,16 @@ class ModuleManager(object):
         return False
 
     def should_update(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         result = self._update_changed_options()
         if result:
             return True
         return False
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         result = dict()
 
         changed = self.update()
@@ -520,6 +522,7 @@ class ModuleManager(object):
         changes = reportable.to_return()
         result.update(**changes)
         result.update(dict(changed=changed))
+        send_teem(start, self.module, version)
         return result
 
     def update(self):
@@ -657,7 +660,7 @@ class ArgumentSpec(object):
             ),
             unicast_failover=dict(
                 type='list',
-                elements='str',
+                elements='dict',
             ),
             mirror_primary_address=dict(),
             mirror_secondary_address=dict(),

@@ -7,29 +7,24 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['stableinterface'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_irule
 short_description: Manage iRules across different modules on a BIG-IP
 description:
-  - Manage iRules across different modules on a BIG-IP.
+  - Manage iRules across different modules on a BIG-IP device.
 version_added: "1.0.0"
 options:
   content:
     description:
-      - When used instead of 'src', sets the contents of an iRule directly to
+      - When used instead of B(src), sets the contents of an iRule directly to
         the specified value. This is for simple values, but can be used with
         lookup plugins for anything complex or with formatting. Either one
         of C(src) or C(content) must be provided.
     type: str
   module:
     description:
-      - The BIG-IP module to add the iRule to.
+      - The BIG-IP module to which the iRule should be added.
     type: str
     required: True
     choices:
@@ -92,23 +87,24 @@ EXAMPLES = r'''
 
 RETURN = r'''
 module:
-  description: The module that the iRule was added to
+  description: The module that the iRule was added to.
   returned: changed and success
   type: str
   sample: gtm
 src:
-  description: The filename that included the iRule source
+  description: The filename that included the iRule source.
   returned: changed and success, when provided
   type: str
   sample: /opt/src/irules/example1.tcl
 content:
-  description: The content of the iRule that was managed
+  description: The content of the iRule that was managed.
   returned: changed and success
   type: str
   sample: "when LB_FAILED { set wipHost [LB::server addr] }"
 '''
 
 import os
+from datetime import datetime
 
 from ansible.module_utils.basic import (
     AnsibleModule, env_fallback
@@ -118,6 +114,8 @@ from ..module_utils.bigip import F5RestClient
 from ..module_utils.common import (
     F5ModuleError, AnsibleF5Parameters, transform_name, f5_argument_spec
 )
+from ..module_utils.icontrol import tmos_version
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -278,6 +276,8 @@ class BaseManager(object):
             )
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         changed = False
         result = dict()
         state = self.want.state
@@ -292,6 +292,7 @@ class BaseManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, version)
         return result
 
     def present(self):

@@ -7,17 +7,12 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['stableinterface'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_snmp
 short_description: Manipulate general SNMP settings on a BIG-IP
 description:
-  - Manipulate general SNMP settings on a BIG-IP.
+  - Manipulate general SNMP settings on a BIG-IP system.
 version_added: "1.0.0"
 options:
   allowed_addresses:
@@ -26,7 +21,7 @@ options:
         daemon accepts requests.
       - This value can be hostnames, IP addresses, or IP networks.
       - You may specify a single list item of C(default) to set the value back
-        to the system's default of C(127.0.0.0/8).
+        to the system default of C(127.0.0.0/8).
       - You can remove all allowed addresses by either providing the word C(none), or
         by providing the empty string C("").
     type: raw
@@ -37,7 +32,7 @@ options:
     type: str
   agent_status_traps:
     description:
-      - When C(enabled), ensures that the system sends a trap whenever the
+      - When C(enabled), ensures the system sends a trap whenever the
         SNMP agent starts running or stops running. This is usually enabled
         by default on a BIG-IP.
     type: str
@@ -46,7 +41,7 @@ options:
       - disabled
   agent_authentication_traps:
     description:
-      - When C(enabled), ensures that the system sends authentication warning
+      - When C(enabled), ensures the system sends authentication warning
         traps to the trap destinations. This is usually disabled by default on
         a BIG-IP.
     type: str
@@ -55,7 +50,7 @@ options:
       - disabled
   device_warning_traps:
     description:
-      - When C(enabled), ensures that the system sends device warning traps
+      - When C(enabled), ensures the system sends device warning traps
         to the trap destinations. This is usually enabled by default on a
         BIG-IP.
     type: str
@@ -94,17 +89,17 @@ EXAMPLES = r'''
 
 RETURN = r'''
 agent_status_traps:
-  description: Value that the agent status traps was set to.
+  description: Value of the agent status traps.
   returned: changed
   type: str
   sample: enabled
 agent_authentication_traps:
-  description: Value that the authentication status traps was set to.
+  description: Value of the authentication status traps.
   returned: changed
   type: str
   sample: enabled
 device_warning_traps:
-  description: Value that the warning status traps was set to.
+  description: Value of the warning status traps.
   returned: changed
   type: str
   sample: enabled
@@ -124,19 +119,19 @@ allowed_addresses:
   type: list
   sample: ['127.0.0.0/8', 'foo.bar.com', '10.10.10.10']
 '''
+from datetime import datetime
 
 from ansible.module_utils.basic import AnsibleModule
 from ansible.module_utils.six import string_types
 
-try:
-    from ansible_collections.ansible.netcommon.plugins.module_utils.compat.ipaddress import ip_network
-except ImportError:
-    from ansible.module_utils.compat.ipaddress import ip_network
+from ansible_collections.ansible.netcommon.plugins.module_utils.compat.ipaddress import ip_network
 
 from ..module_utils.bigip import F5RestClient
 from ..module_utils.common import (
     F5ModuleError, AnsibleF5Parameters, f5_argument_spec, is_valid_hostname
 )
+from ..module_utils.icontrol import tmos_version
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -303,6 +298,8 @@ class ModuleManager(object):
         return False
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         result = dict()
 
         changed = self.update()
@@ -312,6 +309,7 @@ class ModuleManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, version)
         return result
 
     def _announce_deprecations(self, result):

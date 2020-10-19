@@ -7,17 +7,12 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['stableinterface'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_message_routing_protocol
-short_description: Manage generic message parser profile.
+short_description: Manage the generic message parser profile.
 description:
-  - Manages generic message parser profile for use with the message routing framework.
+  - Manages the generic message parser profile for use with the message routing framework.
 version_added: "1.0.0"
 options:
   name:
@@ -27,7 +22,7 @@ options:
     type: str
   description:
     description:
-      - The user defined description of the generic parser profile.
+      - The user-defined description of the generic parser profile.
     type: str
   parent:
     description:
@@ -37,10 +32,10 @@ options:
     type: str
   disable_parser:
     description:
-      - When C(yes), the generic message parser will be disabled ignoring all incoming packets and not directly
+      - When C(yes), the generic message parser is disabled, ignoring all incoming packets and not directly
         send message data.
-      - This mode supports iRule script protocol implementations that will generate messages from the incoming transport
-        stream and send outgoing messages on the outgoing transport stream.
+      - This mode supports iRule script protocol implementations that generates messages from the incoming transport
+        stream and sends outgoing messages on the outgoing transport stream.
     type: bool
   max_egress_buffer:
     description:
@@ -70,7 +65,7 @@ options:
     default: Common
   state:
     description:
-      - When C(present), ensures that the route exists.
+      - When C(present), ensures the route exists.
       - When C(absent), ensures the route is removed.
     type: str
     choices:
@@ -121,7 +116,7 @@ EXAMPLES = r'''
 
 RETURN = r'''
 description:
-  description: The user defined description of the parser profile.
+  description: The user-defined description of the parser profile.
   returned: changed
   type: str
   sample: My description
@@ -156,7 +151,7 @@ no_response:
   type: bool
   sample: yes
 '''
-
+from datetime import datetime
 from ansible.module_utils.basic import (
     AnsibleModule, env_fallback
 )
@@ -168,6 +163,7 @@ from ..module_utils.common import (
 )
 from ..module_utils.compare import cmp_str_with_none
 from ..module_utils.icontrol import tmos_version
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -354,14 +350,15 @@ class ModuleManager(object):
                 version=warning['version']
             )
 
-    def version_less_than_14(self):
-        version = tmos_version(self.client)
+    def version_less_than_14(self, version):
         if LooseVersion(version) < LooseVersion('14.0.0'):
             return True
         return False
 
     def exec_module(self):
-        if self.version_less_than_14():
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
+        if self.version_less_than_14(version):
             raise F5ModuleError('Message routing is not supported on TMOS version below 14.x')
         changed = False
         result = dict()
@@ -377,6 +374,7 @@ class ModuleManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, version)
         return result
 
     def present(self):

@@ -7,11 +7,6 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['stableinterface'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_apm_policy_import
@@ -27,11 +22,12 @@ options:
     required: True
   type:
     description:
-      - Specifies the type of item to export from device.
+      - Specifies the type of item to export from the device.
     type: str
     choices:
       - profile_access
       - access_policy
+      - profile_api_protection
     default: profile_access
   source:
     description:
@@ -40,7 +36,7 @@ options:
   force:
     description:
       - When set to C(yes) any existing policy with the same name will be overwritten by the new import.
-      - If policy does not exist this setting is ignored.
+      - If a policy does not exist, this setting is ignored.
     default: no
     type: bool
   partition:
@@ -48,8 +44,16 @@ options:
       - Device partition to manage resources on.
     type: str
     default: Common
+  reuse_objects:
+    description:
+      - When set to C(yes) and objects referred within the policy exist on the BIG-IP,
+        those will be used instead of the objects defined in the policy.
+      - Reusing existing objects reduces configuration size.
+      - The configuration of existing objects might differ to the configuration of the objects defined in the policy!
+    default: yes
+    type: bool
 notes:
-  - Due to ID685681 it is not possible to execute ng_* tools via REST api on v12.x and 13.x, once this is fixed
+  - Due to ID685681 it is not possible to execute ng_* tools via REST API on v12.x and 13.x, once this is fixed
     this restriction will be removed.
   - Requires BIG-IP >= 14.0.0
 extends_documentation_fragment: f5networks.f5_modules.f5
@@ -89,6 +93,17 @@ EXAMPLES = r'''
       user: admin
       password: secret
   delegate_to: localhost
+
+- name: Import APM profile without re-using existing configuration objects
+  bigip_apm_policy_import:
+    name: new_apm_profile
+    source: /root/apm_profile.tar.gz
+    reuse_objects: false
+    provider:
+      server: lb.mydomain.com
+      user: admin
+      password: secret
+  delegate_to: localhost
 '''
 
 RETURN = r'''
@@ -112,9 +127,16 @@ force:
   returned: changed
   type: bool
   sample: yes
+reuse_objects:
+  description: Set when reusing existing objects on the BIG-IP.
+  returned: changed
+  type: bool
+  sample: yes
 '''
 
 import os
+from datetime import datetime
+
 from ansible.module_utils.basic import (
     AnsibleModule, env_fallback
 )
@@ -127,6 +149,7 @@ from ..module_utils.common import (
 from ..module_utils.icontrol import (
     module_provisioned, tmos_version, upload_file
 )
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -224,6 +247,8 @@ class ModuleManager(object):
             )
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         if not module_provisioned(self.client, 'apm'):
             raise F5ModuleError(
                 "APM must be provisioned to use this module."
@@ -241,6 +266,7 @@ class ModuleManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, version)
         return result
 
     def version_less_than_14(self):
@@ -309,7 +335,14 @@ class ModuleManager(object):
         name = os.path.split(self.want.source)[1]
         self.upload_file_to_device(self.want.source, name)
 
-        cmd = 'ng_import -s /var/config/rest/downloads/{0} {1} -p {2}'.format(name, self.want.name, self.want.partition)
+        if self.want.reuse_objects is True:
+            reuse_objects = "-s"
+        else:
+            reuse_objects = ""
+
+        cmd = 'ng_import {0} /var/config/rest/downloads/{1} {2} -p {3} -t {4}'.format(
+            reuse_objects, name, self.want.name, self.want.partition, self.want.type
+        )
 
         uri = "https://{0}:{1}/mgmt/tm/util/bash/".format(
             self.client.provider['server'],
@@ -368,7 +401,11 @@ class ArgumentSpec(object):
             ),
             type=dict(
                 default='profile_access',
-                choices=['profile_access', 'access_policy']
+                choices=['profile_access', 'access_policy', 'profile_api_protection']
+            ),
+            reuse_objects=dict(
+                type='bool',
+                default='yes'
             ),
             partition=dict(
                 default='Common',

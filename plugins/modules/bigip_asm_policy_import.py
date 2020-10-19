@@ -7,17 +7,12 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['stableinterface'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_asm_policy_import
 short_description: Manage BIG-IP ASM policy imports
 description:
-   - Manage BIG-IP ASM policies policy imports.
+   - Manage the policy imports for BIG-IP ASM policies.
 version_added: "1.0.0"
 options:
   name:
@@ -28,11 +23,11 @@ options:
   policy_type:
     description:
       - The type of the policy to import.
-      - When C(policy_type) is C(security) the policy is imported as an application security policy that you can apply
+      - When C(policy_type) is C(security), the policy is imported as an application security policy that you can apply
         to a virtual server.
-      - When C(policy_type) is C(parent) the policy becomes a parent to which other Security policies attach
+      - When C(policy_type) is C(parent), the policy becomes a parent to which other Security policies attach,
         inheriting its attributes. This policy type cannot be applied to Virtual Servers.
-      - This parameter is available on TMOS version 13.x and up and only takes effect when C(inline) import method
+      - This parameter is available on TMOS version 13.x and later and only takes effect when the C(inline) import method
         is used.
     type: str
     default: security
@@ -42,34 +37,34 @@ options:
   retain_inheritance_settings:
     description:
       - Indicate if an imported security type policy should retain settings when attached to parent policy.
-      - This parameter is available on TMOS version 13.x and up and only takes effect when C(inline) import method
+      - This parameter is available on TMOS version 13.x and later and only takes effect when the C(inline) import method
         is used.
     type: bool
   parent_policy:
     description:
       - The parent policy to which the newly imported policy should be attached as child.
-      - When C(parent_policy) is specified the imported C(policy_type) must not be C(parent).
-      - This parameter is available on TMOS version 13.x and up and only takes effect when C(inline) import method
+      - When C(parent_policy) is specified, the imported C(policy_type) must not be C(parent).
+      - This parameter is available on TMOS version 13.x and later and only takes effect when C(inline) import method
         is used.
     type: str
   base64:
     description:
-      - Indicates if imported policy string is encoded in base64.
-      - Parameter only takes effect when using C(inline) method of import.
+      - Indicates if the imported policy string is encoded in Base64.
+      - Parameter only takes effect when using the C(inline) method of import.
     type: bool
   inline:
     description:
-      - When specified the ASM policy is created from a provided string.
-      - Content needs to be provided in a valid XML format otherwise the operation will fail.
+      - When specified, the ASM policy is created from a provided string.
+      - Content needs to be provided in a valid XML format, otherwise the operation will fail.
     type: str
   encoding:
     description:
       - Specifies the desired application language of the imported policy.
       - The imported policy cannot be a C(parent) type or attached to a C(parent) policy when C(auto-detect)
         encoding is set.
-      - When importing policy to attach to a C(parent) policy, the C(encoding) of the imported policy if different
-        must be set to to be the same value as C(parent_policy), otherwise import will fail.
-      - This parameter is available on TMOS version 13.x and up and only takes effect when C(inline) import method
+      - When importing a policy to attach to a C(parent) policy, the C(encoding) of the imported policy, if different,
+        must be set to be the same value as C(parent_policy), otherwise import will fail.
+      - This parameter is available on TMOS version 13.x and later and only takes effect when the C(inline) import method
         is used.
     type: str
     choices:
@@ -120,7 +115,7 @@ options:
     type: bool
   partition:
     description:
-      - Device partition to create policy on.
+      - Device partition on which to create the policy.
       - This parameter is also applied to indicate the partition of the C(parent) policy.
     type: str
     default: Common
@@ -170,7 +165,7 @@ policy_type:
   type: str
   sample: security
 retain_inheritance_settings:
-  description: Indicate if an imported security type policy should retain settings when attached to parent policy.
+  description: Indicate if an imported security type policy should retain settings when attached to the parent policy.
   returned: changed
   type: bool
   sample: yes
@@ -180,12 +175,12 @@ parent_policy:
   type: str
   sample: /Common/parent
 base64:
-  description: Indicates if imported policy string is encoded in base64.
+  description: Indicates if the imported policy string is encoded in Base64.
   returned: changed
   type: bool
   sample: yes
 encoding:
-  description: Thehe desired application language of the imported policy.
+  description: The desired application language of the imported policy.
   returned: changed
   type: str
   sample: utf-8
@@ -195,7 +190,7 @@ source:
   type: str
   sample: /root/some_policy.xml
 inline:
-  description: Contents of policy as an inline string.
+  description: Contents of a policy as an inline string.
   returned: changed
   type: str
   sample: <xml>foobar contents</xml>
@@ -213,6 +208,8 @@ force:
 
 import os
 import time
+from datetime import datetime
+
 from ansible.module_utils.basic import (
     AnsibleModule, env_fallback
 )
@@ -221,8 +218,9 @@ from ..module_utils.common import (
     F5ModuleError, AnsibleF5Parameters, f5_argument_spec, flatten_boolean, fq_name
 )
 from ..module_utils.icontrol import (
-    module_provisioned, upload_file
+    module_provisioned, upload_file, tmos_version
 )
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -375,6 +373,8 @@ class ModuleManager(object):
             )
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         if not module_provisioned(self.client, 'asm'):
             raise F5ModuleError(
                 "ASM must be provisioned to use this module."
@@ -389,6 +389,7 @@ class ModuleManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, version)
         return result
 
     def _clear_changes(self):
@@ -413,6 +414,8 @@ class ModuleManager(object):
         if self.exists():
             if self.want.force is False:
                 return False
+        if not self.exists() and self.want.force is True:
+            self.want.update({'force': None})
         if self.want.inline:
             task = self.inline_import()
             self.wait_for_task(task)

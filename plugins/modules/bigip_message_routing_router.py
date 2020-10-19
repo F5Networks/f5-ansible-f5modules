@@ -7,11 +7,6 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['stableinterface'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_message_routing_router
@@ -27,12 +22,12 @@ options:
     type: str
   description:
     description:
-      - The user defined description of the router profile.
+      - The user-defined description of the router profile.
     type: str
   type:
     description:
       - Parameter used to specify the type of the router profile to manage.
-      - Default setting is C(generic) with more options added in future.
+      - Default setting is C(generic) with more options coming.
     type: str
     choices:
       - generic
@@ -40,17 +35,17 @@ options:
   parent:
     description:
       - The parent template of this router profile. Once this value has been set, it cannot be changed.
-      - The default values are set by the system if not specified and they correspond to the router type created, ie.
-        C(/Common/messagerouter) for C(generic) C(type) and so on.
+      - The default values are set by the system if not specified and they correspond to the router type created,
+        for example, C(/Common/messagerouter) for C(generic) C(type) and so on.
     type: str
   ignore_client_port:
     description:
-      - When C(yes), the remote port on clientside connections ie. connections where the peer connected to the BIG-IP
+      - When C(yes), the remote port on clientside connections (connections where the peer connected to the BIG-IP)
         is ignored when searching for an existing connection.
     type: bool
   inherited_traffic_group:
     description:
-      - When set to C(yes) the C(traffic_group) will be inherited from the containing folder. When not specified the
+      - When set to C(yes), the C(traffic_group) will be inherited from the containing folder. When not specified the
         system sets this to C(no) when creating new router profile.
     type: bool
   traffic_group:
@@ -62,7 +57,7 @@ options:
   use_local_connection:
     description:
       - If C(yes), the router will route a message to an existing connection on the same TMM as the message was
-        received on.
+        received.
     type: bool
   max_pending_bytes:
     description:
@@ -92,8 +87,8 @@ options:
     description:
       - Specifies the maximum time in milliseconds that a message will be held on the standby device as it waits for
         the active device to route the message.
-      - Messages on the standby device held for longer then the configurable sweeper interval, will be dropped.
-      - The accepted range is between 0 and 4294967295 inclusive.
+      - Messages on the standby device held for longer than the configurable sweeper interval, will be dropped.
+      - The acceptable range is between 0 and 4294967295 inclusive.
     type: int
   routes:
     description:
@@ -108,7 +103,7 @@ options:
     default: Common
   state:
     description:
-      - When C(present), ensures that the router profile exists.
+      - When C(present), ensures the router profile exists.
       - When C(absent), ensures the router profile is removed.
     type: str
     choices:
@@ -163,7 +158,7 @@ EXAMPLES = r'''
 
 RETURN = r'''
 description:
-  description: The user defined description of the router profile.
+  description: The user-defined description of the router profile.
   returned: changed
   type: str
   sample: My description
@@ -178,7 +173,7 @@ ignore_client_port:
   type: bool
   sample: no
 inherited_traffic_group:
-  description: Specifies if traffic-group should be inherited from containing folder.
+  description: Specifies if a traffic-group should be inherited from containing folder.
   returned: changed
   type: bool
   sample: yes
@@ -188,7 +183,7 @@ traffic_group:
   type: str
   sample: /Common/traffic-group-1
 use_local_connection:
-  description: Enables routing of messages to an existing connection on the same TMM as the message was received on.
+  description: Enables routing of messages to an existing connection on the same TMM as the message was received.
   returned: changed
   type: bool
   sample: yes
@@ -223,11 +218,12 @@ routes:
   type: list
   sample: ['/Common/route1', '/Common/route2']
 '''
+from datetime import datetime
+from distutils.version import LooseVersion
 
 from ansible.module_utils.basic import (
     AnsibleModule, env_fallback
 )
-from distutils.version import LooseVersion
 
 from ..module_utils.bigip import F5RestClient
 from ..module_utils.common import (
@@ -237,6 +233,7 @@ from ..module_utils.compare import (
     cmp_str_with_none, cmp_simple_list
 )
 from ..module_utils.icontrol import tmos_version
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -510,6 +507,8 @@ class BaseManager(object):
             )
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         changed = False
         result = dict()
         state = self.want.state
@@ -524,6 +523,7 @@ class BaseManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, version)
         return result
 
     def present(self):

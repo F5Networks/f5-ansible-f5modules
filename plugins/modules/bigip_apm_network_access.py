@@ -7,11 +7,6 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['stableinterface'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_apm_network_access
@@ -44,7 +39,7 @@ options:
     type: bool
   allow_local_dns:
     description:
-      - Enables local access to DNS servers configured on client prior to establishing network access connection.
+      - Enables local access to DNS servers configured on the client prior to establishing a network access connection.
     type: bool
   split_tunnel:
     description:
@@ -63,19 +58,19 @@ options:
     type: bool
   dtls_port:
     description:
-      - Specifies the port number that the network access resource uses for secure UDP traffic with DTLS.
+      - Specifies the port number the network access resource uses for secure UDP traffic with DTLS.
     type: int
   ipv4_lease_pool:
     description:
-      - Specifies IPV4 lease pool resource to use with network access.
-      - Referencing lease pool can be done in the full path format for example, C(/Common/pool_name).
-      - When lease pool is referenced in full path format, the C(partition) parameter is ignored.
+      - Specifies the IPV4 lease pool resource to use with network access.
+      - Referencing a lease pool can be done in the full path format, for example C(/Common/pool_name).
+      - When a lease pool is referenced in full path format, the C(partition) parameter is ignored.
     type: str
   ipv6_lease_pool:
     description:
-      - Specifies IPV6 lease pool resource to use with network access.
-      - Referencing lease pool can be done in the full path format for example, C(/Common/pool_name).
-      - When lease pool is referenced in full path format, the C(partition) parameter is ignored.
+      - Specifies the IPV6 lease pool resource to use with network access.
+      - Referencing a lease pool can be done in the full path format, for example C(/Common/pool_name).
+      - When a lease pool is referenced in full path format, the C(partition) parameter is ignored.
     type: str
   excluded_ipv6_adresses:
     description:
@@ -85,7 +80,7 @@ options:
     suboptions:
       subnet:
         description:
-          - "The address of subnet in CIDR format, e.g. C(2001:db8:abcd:8000::/52)"
+          - "The address of a subnet in CIDR format, e.g. C(2001:db8:abcd:8000::/52)"
           - Host addresses can be specified without the CIDR mask notation.
         type: str
   excluded_ipv4_adresses:
@@ -140,8 +135,8 @@ options:
     default: Common
   state:
     description:
-      - When C(state) is C(present), ensures that the ACL exists.
-      - When C(state) is C(absent), ensures that the ACL is removed.
+      - When C(state) is C(present), ensures the ACL exists.
+      - When C(state) is C(absent), ensures the ACL is removed.
     type: str
     choices:
       - present
@@ -215,17 +210,17 @@ allow_local_subnet:
   type: bool
   sample: yes
 allow_local_dns:
-  description: Enables local access to DNS servers configured on client.
+  description: Enables local access to DNS servers configured on the client.
   returned: changed
   type: bool
   sample: yes
 split_tunnel:
-  description: Enables split tunnel on network access resource.
+  description: Enables split tunnel on the network access resource.
   returned: changed
   type: bool
   sample: yes
 snat_pool:
-  description: The name of a SNAT pool used by network access resource.
+  description: The name of a SNAT pool used by the network access resource.
   returned: changed
   type: str
   sample: /Common/my-pool
@@ -235,17 +230,17 @@ dtls:
   type: bool
   sample: no
 dtls_port:
-  description: Specifies the port number that the network access resource uses for DTLS.
+  description: Specifies the port number the network access resource uses for DTLS.
   returned: changed
   type: int
   sample: 4433
 ipv4_lease_pool:
-  description: Specifies IPV4 lease pool resource to use with network access.
+  description: Specifies a IPV4 lease pool resource to use with network access.
   returned: changed
   type: str
   sample: /Common/leasepoolv4
 ipv6_lease_pool:
-  description: Specifies IPV6 lease pool resource to use with network access.
+  description: Specifies a IPV6 lease pool resource to use with network access.
   returned: changed
   type: str
   sample: /Common/leasepoolv6
@@ -304,6 +299,7 @@ ipv4_address_space:
       sample: 192.168.10.1
   sample: hash/dictionary of values
 '''
+from datetime import datetime
 
 from ansible.module_utils.basic import (
     AnsibleModule, env_fallback
@@ -315,8 +311,11 @@ from ..module_utils.common import (
 from ..module_utils.compare import (
     cmp_str_with_none, cmp_simple_list, compare_complex_list
 )
-from ..module_utils.icontrol import module_provisioned
+from ..module_utils.icontrol import (
+    module_provisioned, tmos_version
+)
 from ..module_utils.ipaddress import ip_network
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -745,6 +744,8 @@ class ModuleManager(object):
             )
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         if not module_provisioned(self.client, 'apm'):
             raise F5ModuleError(
                 "APM must be provisioned to use this module."
@@ -763,6 +764,7 @@ class ModuleManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, version)
         return result
 
     def present(self):

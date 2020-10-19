@@ -7,17 +7,12 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['preview'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigiq_utility_license
 short_description: Manage utility licenses on a BIG-IQ
 description:
-  - Manages utility licenses on a BIG-IQ. Utility licenses are one form of licenses
+  - Manages utility licenses on a BIG-IQ. Utility licenses are one form of license
     that BIG-IQ can distribute. These licenses, unlike regkey licenses, do not require
     a pool to be created before creation. Additionally, when assigning them, you assign
     by offering instead of key.
@@ -30,14 +25,14 @@ options:
     required: True
   accept_eula:
     description:
-      - A key that signifies that you accept the F5 EULA for this license.
+      - A key that signifies you accept the F5 EULA for this license.
       - A copy of the EULA can be found here https://askf5.f5.com/csp/article/K12902
       - This is required when C(state) is C(present).
     type: bool
   state:
     description:
       - The state of the utility license on the system.
-      - When C(present), guarantees that the license exists.
+      - When C(present), guarantees the license exists.
       - When C(absent), removes the license from the system.
     type: str
     choices:
@@ -79,6 +74,7 @@ RETURN = r'''
 '''
 
 import time
+from datetime import datetime
 
 from ansible.module_utils.basic import AnsibleModule
 
@@ -86,6 +82,8 @@ from ..module_utils.bigip import F5RestClient
 from ..module_utils.common import (
     F5ModuleError, AnsibleF5Parameters, f5_argument_spec
 )
+from ..module_utils.icontrol import bigiq_version
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -209,6 +207,8 @@ class ModuleManager(object):
         return False
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = bigiq_version(self.client)
         changed = False
         result = dict()
         state = self.want.state
@@ -223,6 +223,7 @@ class ModuleManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, version)
         return result
 
     def _announce_deprecations(self, result):

@@ -7,17 +7,12 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['stableinterface'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_firewall_rule_list
 short_description: Manage AFM security firewall policies on a BIG-IP
 description:
-  - Manages AFM security firewall policies on a BIG-IP.
+  - Manages AFM (Advanced Firewall Manager) security firewall policies on a BIG-IP.
 version_added: "1.0.0"
 options:
   name:
@@ -29,12 +24,12 @@ options:
     description:
       - The description to attach to the policy.
       - This parameter is only supported on versions of BIG-IP >= 12.1.0. On earlier
-        versions it will simply be ignored.
+        versions it is ignored.
     type: str
   state:
     description:
-      - When C(state) is C(present), ensures that the rule list exists.
-      - When C(state) is C(absent), ensures that the rule list is removed.
+      - When C(state) is C(present), ensures the rule list exists.
+      - When C(state) is C(absent), ensures the rule list is removed.
     type: str
     choices:
       - present
@@ -42,14 +37,14 @@ options:
     default: present
   rules:
     description:
-      - Specifies a list of rules that you want associated with this policy.
+      - Specifies a list of rules you want associated with this policy.
         The order of this list is the order they will be evaluated by BIG-IP.
         If the specified rules do not exist (for example when creating a new
         policy) then they will be created.
       - Rules specified here, if they do not exist, will be created with "default deny"
         behavior. It is expected that you follow-up this module with the actual
         configuration for these rules.
-      - The C(bigip_firewall_rule) module can be used to also create, as well as
+      - The C(bigip_firewall_rule) module can also be used to create, as well as
         edit, existing and new rules.
     type: list
     elements: str
@@ -85,21 +80,23 @@ description:
   type: str
   sample: My firewall policy
 rules:
-  description: The list of rules, in the order that they are evaluated, on the device.
+  description: The list of rules on the device, in the order that they are evaluated.
   returned: changed
   type: list
   sample: ['rule1', 'rule2', 'rule3']
 '''
+from datetime import datetime
 
 from ansible.module_utils.basic import (
     AnsibleModule, env_fallback
 )
 
-
 from ..module_utils.bigip import F5RestClient
 from ..module_utils.common import (
     F5ModuleError, AnsibleF5Parameters, transform_name, f5_argument_spec
 )
+from ..module_utils.icontrol import tmos_version
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -238,6 +235,8 @@ class ModuleManager(object):
         return False
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         changed = False
         result = dict()
         state = self.want.state
@@ -251,6 +250,7 @@ class ModuleManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, version)
         return result
 
     def _announce_deprecations(self, result):

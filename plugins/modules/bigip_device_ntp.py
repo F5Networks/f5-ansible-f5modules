@@ -7,17 +7,12 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['stableinterface'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_device_ntp
 short_description: Manage NTP servers on a BIG-IP
 description:
-  - Manage NTP servers on a BIG-IP.
+  - Manage NTP (Network Time Protocol) servers on a BIG-IP.
 version_added: "1.0.0"
 options:
   ntp_servers:
@@ -29,7 +24,7 @@ options:
   state:
     description:
       - The state of the NTP servers on the system. When C(present), guarantees
-        that the NTP servers are set on the system. When C(absent), removes the
+        the NTP servers are set on the system. When C(absent), removes the
         specified NTP servers from the device configuration.
     type: str
     choices:
@@ -70,23 +65,25 @@ EXAMPLES = r'''
 
 RETURN = r'''
 ntp_servers:
-  description: The NTP servers that were set on the device
+  description: The NTP servers that were set on the device.
   returned: changed
   type: list
   sample: ["192.0.2.23", "192.0.2.42"]
 timezone:
-  description: The timezone that was set on the device
+  description: The timezone that was set on the device.
   returned: changed
   type: str
   sample: true
 '''
-
+from datetime import datetime
 from ansible.module_utils.basic import AnsibleModule
 
 from ..module_utils.bigip import F5RestClient
 from ..module_utils.common import (
     F5ModuleError, AnsibleF5Parameters, is_empty_list, f5_argument_spec
 )
+from ..module_utils.icontrol import tmos_version
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -247,6 +244,8 @@ class ModuleManager(object):
         return False
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         changed = False
         result = dict()
         state = self.want.state
@@ -265,7 +264,7 @@ class ModuleManager(object):
 
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
-
+        send_teem(start, self.module, version)
         return result
 
     def _grab_attr(self, item):

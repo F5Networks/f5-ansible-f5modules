@@ -7,22 +7,17 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['stableinterface'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_asm_policy_server_technology
-short_description: Manages Server Technology on ASM policy
+short_description: Manages Server Technology on an ASM policy
 description:
-  - Manages Server Technology on ASM policy.
+  - Manages Server Technology on ASM policies.
 version_added: "1.0.0"
 options:
   name:
     description:
-      - Specifies the name of the server technology to apply on or remove from the ASM policy.
+      - Specifies the name of the server technology to apply on, or remove from, the ASM policy.
     type: str
     required: True
     choices:
@@ -69,12 +64,12 @@ options:
       - Jetty
   policy_name:
     description:
-      - Specifies the name of an existing ASM policy to add or remove server technology.
+      - Specifies the name of an existing ASM policy to add or remove a server technology to.
     type: str
     required: True
   state:
     description:
-      - When C(present), ensures that the resource exists.
+      - When C(present), ensures the resource exists.
       - When C(absent), ensures the resource is removed.
     type: str
     default: present
@@ -83,11 +78,11 @@ options:
       - absent
   partition:
     description:
-      - This parameter is only used when identifying ASM policy.
+      - This parameter is only used when identifying an ASM policy.
     type: str
     default: Common
 notes:
-  - This module is primarily used as a component of configuring ASM policy in Ansible Galaxy ASM Policy Role.
+  - This module is primarily used as a component of configuring an ASM policy in Ansible Galaxy ASM Policy Role.
   - Requires BIG-IP >= 13.0.0
 extends_documentation_fragment: f5networks.f5_modules.f5
 author:
@@ -123,11 +118,12 @@ policy_name:
   type: str
   sample: FooPolicy
 name:
-  description: The name of Server Technology added/removed on ASM policy
+  description: The name of Server Technology added/removed on the ASM policy
   returned: changed
   type: str
   sample: Joomla
 '''
+from datetime import datetime
 
 from ansible.module_utils.basic import (
     AnsibleModule, env_fallback
@@ -141,6 +137,7 @@ from ..module_utils.common import (
 from ..module_utils.icontrol import (
     module_provisioned, tmos_version
 )
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -216,6 +213,8 @@ class ModuleManager(object):
             self.changes = Changes(params=changed)
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         if not module_provisioned(self.client, 'asm'):
             raise F5ModuleError(
                 "ASM must be provisioned to use this module."
@@ -239,6 +238,7 @@ class ModuleManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, version)
         return result
 
     def version_is_less_than_13(self):

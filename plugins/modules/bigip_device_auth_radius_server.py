@@ -7,28 +7,23 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['preview'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_device_auth_radius_server
-short_description: Manages device's radius server configuration
+short_description: Manages the RADIUS server configuration of the device
 description:
-  - Manages device's radius server configuration.
-  - Used in tandem with C(bigip_device_auth_radius) module.
+  - Manages a device's RADIUS server configuration.
+  - Used in tandem with the C(bigip_device_auth_radius) module.
 version_added: "1.3.0"
 options:
   name:
     description:
-      - Specifies the name of the radius server to manage.
+      - Specifies the name of the RADIUS server to manage.
     type: str
     required: True
   description:
     description:
-      - The description of the radius server.
+      - The description of the RADIUS server.
     type: str
   ip:
     description:
@@ -42,7 +37,7 @@ options:
     type: int
   secret:
     description:
-      - Specifies secret used for accessing RADIUS server.
+      - Specifies the secret used for accessing RADIUS server.
       - This parameter is mandatory when creating a new resource.
     type: str
   timeout:
@@ -57,8 +52,8 @@ options:
     default: Common
   state:
     description:
-      - When C(state) is C(present), ensures that the RADIUS server exists.
-      - When C(state) is C(absent), ensures that the RADIUS server is removed.
+      - When C(state) is C(present), ensures the RADIUS server exists.
+      - When C(state) is C(absent), ensures the RADIUS server is removed.
     type: str
     choices:
       - present
@@ -121,7 +116,7 @@ EXAMPLES = r'''
 
 RETURN = r'''
 ip:
-  description: IP address of RADIUS Server.
+  description: IP address of the RADIUS Server.
   returned: changed
   type: str
   sample: 1.1.1.1
@@ -136,12 +131,12 @@ timeout:
   type: int
   sample: 3
 description:
-  description: User defined description of Radius server.
+  description: User defined description of the RADIUS server.
   returned: changed
   type: str
   sample: "this is my server"
 '''
-
+from datetime import datetime
 from ansible.module_utils.basic import (
     AnsibleModule, env_fallback
 )
@@ -152,6 +147,8 @@ from ..module_utils.common import (
 )
 from ..module_utils.compare import cmp_str_with_none
 from ..module_utils.ipaddress import is_valid_ip
+from ..module_utils.icontrol import tmos_version
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -330,6 +327,8 @@ class ModuleManager(object):
             )
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         changed = False
         result = dict()
         state = self.want.state
@@ -344,6 +343,7 @@ class ModuleManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, version)
         return result
 
     def present(self):

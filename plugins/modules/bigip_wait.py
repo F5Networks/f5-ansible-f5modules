@@ -7,17 +7,12 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['stableinterface'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_wait
 short_description: Wait for a BIG-IP condition before continuing
 description:
-  - You can wait for BIG-IP to be "ready". By "ready", we mean that BIG-IP is ready
+  - With this module, you can wait for BIG-IP to be "ready", meaning the BIG-IP is ready
     to accept configuration.
   - This module can take into account situations where the device is in the middle
     of rebooting due to a configuration change.
@@ -27,9 +22,9 @@ options:
     description:
       - The type of the BIG-IP.
       - Defaults to C(standard), the other choice is C(vcmp).
-      - The choice made defines what module or service Ansible will look for to establish
-        that the device has recovered, so please ensure the correct choice is
-        specified, specially when running this against VCMP.
+      - This choice defines which module or service Ansible looks for to establish
+        that the device has recovered, so ensure to specify the correct choice,
+        especially when running this against VCMP.
     type: str
     default: standard
     choices:
@@ -37,9 +32,9 @@ options:
       - vcmp
   timeout:
     description:
-      - Maximum number of seconds to wait for.
-      - When used without other conditions it is equivalent of just sleeping.
-      - The default timeout is deliberately set to 2 hours because no individual
+      - Maximum number of seconds to wait.
+      - When used without other conditions, it is equivalent of just sleeping.
+      - The default timeout is deliberately set to 2 hours because there is no individual
         REST API.
     type: int
     default: 7200
@@ -50,7 +45,7 @@ options:
     default: 0
   sleep:
     description:
-      - Number of seconds to sleep between checks, before 2.3 this was hardcoded to 1 second.
+      - Number of seconds to sleep between checks. Before version 2.3 this was hardcoded to 1 second.
     type: int
     default: 1
   msg:
@@ -107,6 +102,8 @@ from ..module_utils.bigip import F5RestClient
 from ..module_utils.common import (
     F5ModuleError, AnsibleF5Parameters, is_cli, f5_argument_spec
 )
+from ..module_utils.icontrol import tmos_version
+from ..module_utils.teem import send_teem
 
 try:
     from ..module_utils.common import run_commands
@@ -167,17 +164,6 @@ class BaseManager(object):
         self.have = None
         self.want = Parameters(params=self.module.params)
         self.changes = Parameters()
-
-    def exec_module(self):
-        result = dict()
-
-        changed = self.execute()
-
-        changes = self.changes.to_return()
-        result.update(**changes)
-        result.update(dict(changed=changed))
-        self._announce_deprecations(result)
-        return result
 
     def _announce_deprecations(self, result):
         warnings = result.pop('__warnings', [])
@@ -246,6 +232,19 @@ class BaseManager(object):
 
 
 class V1Manager(BaseManager):
+    def exec_module(self):
+        start = datetime.datetime.now().isoformat()
+        result = dict()
+
+        changed = self.execute()
+
+        changes = self.changes.to_return()
+        result.update(**changes)
+        result.update(dict(changed=changed))
+        self._announce_deprecations(result)
+        send_teem(start, self.module, None)
+        return result
+
     def wait_for_device(self, start, end):
         while datetime.datetime.utcnow() < end:
             time.sleep(int(self.want.sleep))
@@ -309,6 +308,20 @@ class V1Manager(BaseManager):
 
 
 class V2Manager(BaseManager):
+    def exec_module(self):
+        start = datetime.datetime.now().isoformat()
+        version = tmos_version(self.client)
+        result = dict()
+
+        changed = self.execute()
+
+        changes = self.changes.to_return()
+        result.update(**changes)
+        result.update(dict(changed=changed))
+        self._announce_deprecations(result)
+        send_teem(start, self.module, version)
+        return result
+
     def wait_for_device(self, start, end):
         while datetime.datetime.utcnow() < end:
             time.sleep(int(self.want.sleep))

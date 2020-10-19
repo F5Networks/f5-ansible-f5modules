@@ -7,11 +7,6 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['stableinterface'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_message_routing_transport_config
@@ -27,22 +22,22 @@ options:
     required: True
   description:
     description:
-      - The user defined description of the transport config.
+      - The user-defined description of the transport config.
     type: str
   profiles:
     description:
-      - Specifies a list profiles for the outgoing connection to use to direct and manage traffic.
+      - Specifies a list of profiles for the outgoing connection to use to direct and manage traffic.
     type: list
     elements: str
   src_addr_translation:
     description:
       - Specifies the type of source address translation enabled for the transport config and the pool
-        that the source address translation will use.
+        the source address translation will use.
     suboptions:
       type:
         description:
           - Specifies the type of source address translation associated with the specified transport config.
-          - When set to C(snat) the C(pool) parameter needs to contain a name for a valid LSN or SNAT pool.
+          - When set to C(snat), the C(pool) parameter needs to contain a name for a valid LSN or SNAT pool.
         type: str
         choices:
           - snat
@@ -51,16 +46,16 @@ options:
       pool:
         description:
           - Specifies the name of a LSN or SNAT pool used by the specified transport config.
-          - "Name can also be specified in C(fullPath) format: C(/Common/foobar)"
-          - When C(type) is C(none) or C(automap) the pool parameter will be replaced by C(none) keyword,
+          - "Name can also be specified in C(fullPath) format: C(/Common/foobar)."
+          - When C(type) is C(none) or C(automap), the pool parameter will be replaced by C(none) keyword,
             thus any defined C(pool) parameter will be ignored.
         type: str
     type: dict
   src_port:
     description:
-      - Specifies the source port to be used for the connection being created.
+      - Specifies the source port for the connection being created.
       - If no value is specified an ephemeral port is chosen for the connection being created.
-      - The accepted range is between 0 and 65535 inclusive.
+      - The acceptable range is between 0 and 65535 inclusive.
     type: int
   rules:
     description:
@@ -70,8 +65,8 @@ options:
     elements: str
   type:
     description:
-      - Parameter used to specify the type of the transport-config object to manage.
-      - Default setting is C(generic) with more options added in future.
+      - Parameter used to specify the type of transport-config object to manage.
+      - Default setting is C(generic) with more options coming.
     type: str
     choices:
       - generic
@@ -83,7 +78,7 @@ options:
     default: Common
   state:
     description:
-      - When C(present), ensures that the transport-config object exists.
+      - When C(present), ensures the transport-config object exists.
       - When C(absent), ensures the transport-config object is removed.
     type: str
     choices:
@@ -136,7 +131,7 @@ EXAMPLES = r'''
 
 RETURN = r'''
 description:
-  description: The user defined description of the router profile.
+  description: The user-defined description of the router profile.
   returned: changed
   type: str
   sample: My description
@@ -167,16 +162,17 @@ src_addr_translation:
       sample: /Common/pool1
   sample: hash/dictionary of values
 source_port:
-  description: The source port to be used for the connection being created.
+  description: The source port for the connection being created.
   returned: changed
   type: int
   sample: 10041
 '''
+from datetime import datetime
+from distutils.version import LooseVersion
 
 from ansible.module_utils.basic import (
     AnsibleModule, env_fallback
 )
-from distutils.version import LooseVersion
 
 from ..module_utils.bigip import F5RestClient
 from ..module_utils.common import (
@@ -186,6 +182,7 @@ from ..module_utils.compare import (
     cmp_str_with_none, cmp_simple_list
 )
 from ..module_utils.icontrol import tmos_version
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -418,6 +415,8 @@ class BaseManager(object):
             )
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         changed = False
         result = dict()
         state = self.want.state
@@ -432,6 +431,7 @@ class BaseManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, version)
         return result
 
     def present(self):

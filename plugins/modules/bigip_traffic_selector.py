@@ -7,11 +7,6 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['stableinterface'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_traffic_selector
@@ -60,7 +55,7 @@ options:
     default: Common
   state:
     description:
-      - When C(present), ensures that the resource exists.
+      - When C(present), ensures the resource exists.
       - When C(absent), ensures the resource is removed.
     type: str
     choices:
@@ -112,20 +107,20 @@ order:
 '''
 
 import re
+from datetime import datetime
 
 from ansible.module_utils.basic import (
     AnsibleModule, env_fallback
 )
-try:
-    from ansible_collections.ansible.netcommon.plugins.module_utils.compat.ipaddress import ip_interface
-except ImportError:
-    from ansible.module_utils.compat.ipaddress import ip_interface
+from ansible_collections.ansible.netcommon.plugins.module_utils.compat.ipaddress import ip_interface
 
 from ..module_utils.bigip import F5RestClient
 from ..module_utils.common import (
     F5ModuleError, AnsibleF5Parameters, transform_name, f5_argument_spec, fq_name
 )
 from ..module_utils.compare import cmp_str_with_none
+from ..module_utils.icontrol import tmos_version
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -314,6 +309,8 @@ class ModuleManager(object):
         return False
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         changed = False
         result = dict()
         state = self.want.state
@@ -328,6 +325,7 @@ class ModuleManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, version)
         return result
 
     def _announce_deprecations(self, result):

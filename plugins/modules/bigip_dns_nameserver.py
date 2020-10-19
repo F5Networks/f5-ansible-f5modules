@@ -7,20 +7,15 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['stableinterface'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_dns_nameserver
 short_description: Manage LTM DNS nameservers on a BIG-IP
 description:
   - Manages LTM DNS nameservers on a BIG-IP. These nameservers form part of what is
-    known as DNS Express on a BIG-IP. This module does not configure GTM related
+    known as DNS Express on a BIG-IP. This module does not configure GTM (DNS module) related
     functionality, nor does it configure system-level name servers that affect the
-    base system's ability to resolve DNS names.
+    ability of the base system to resolve DNS names.
 version_added: "1.0.0"
 options:
   name:
@@ -44,7 +39,7 @@ options:
     type: str
   route_domain:
     description:
-      - Specifies the local route domain that the DNS nameserver (client) or back-end
+      - Specifies the local route domain the DNS nameserver (client) or back-end
         DNS authoritative server (DNS Express server) uses for outbound traffic.
       - When creating a new nameserver, if this value is not specified, the default
         is C(0).
@@ -61,7 +56,7 @@ options:
     type: str
   state:
     description:
-      - When C(present), ensures that the resource exists.
+      - When C(present), ensures the resource exists.
       - When C(absent), ensures the resource is removed.
     type: str
     choices:
@@ -104,7 +99,7 @@ service_port:
   type: int
   sample: 53
 '''
-
+from datetime import datetime
 from ansible.module_utils.basic import (
     AnsibleModule, env_fallback
 )
@@ -113,6 +108,8 @@ from ..module_utils.bigip import F5RestClient
 from ..module_utils.common import (
     F5ModuleError, AnsibleF5Parameters, transform_name, f5_argument_spec, fq_name
 )
+from ..module_utils.icontrol import tmos_version
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -266,6 +263,8 @@ class ModuleManager(object):
         return False
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         changed = False
         result = dict()
         state = self.want.state
@@ -280,6 +279,7 @@ class ModuleManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, version)
         return result
 
     def _announce_deprecations(self, result):

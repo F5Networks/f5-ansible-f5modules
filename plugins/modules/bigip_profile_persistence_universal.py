@@ -7,17 +7,12 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['preview'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_profile_persistence_universal
 short_description: Manage universal persistence profiles
 description:
-  - Manages universal persistence profiles.
+  - Manages universal persistence profiles on the BIG-IP system.
 version_added: "1.1.0"
 options:
   name:
@@ -38,28 +33,28 @@ options:
     type: str
   match_across_services:
     description:
-      - When C(yes), specifies that all persistent connections from a client IP address that go
+      - When C(yes), specifies all persistent connections from a client IP address that go
         to the same virtual IP address also go to the same node.
       - When creating a new profile, if this parameter is not specified, the
         default is provided by the parent profile.
     type: bool
   match_across_virtuals:
     description:
-      - When C(yes), specifies that all persistent connections from the same client IP address
+      - When C(yes), specifies all persistent connections from the same client IP address
         go to the same node.
       - When creating a new profile, if this parameter is not specified, the
         default is provided by the parent profile.
     type: bool
   match_across_pools:
     description:
-      - When C(yes), specifies that the system can use any pool that contains this persistence
+      - When C(yes), specifies the system can use any pool that contains this persistence
         record.
       - When creating a new profile, if this parameter is not specified, the
         default is provided by the parent profile.
     type: bool
   mirror:
     description:
-      - When C(yes), specifies that if the active unit goes into the standby mode, the system
+      - When C(yes), specifies if the active unit goes into the standby mode, the system
         mirrors any persistence records to its peer.
       - When creating a new profile, if this parameter is not specified, the
         default is provided by the parent profile.
@@ -68,7 +63,7 @@ options:
     description:
       - Specifies the iRule used to select a persistence entry.
       - When creating a new profile, if this parameter is not specified, the
-        default is None, that disables this setting.
+        default is C(None), which disables this setting.
     type: str
   timeout:
     description:
@@ -80,7 +75,7 @@ options:
     type: str
   override_connection_limit:
     description:
-      - When C(yes), specifies that the system allows you to specify that pool member connection
+      - When C(yes), specifies the system allows you to specify that pool member connection
         limits will be overridden for persisted clients.
       - Per-virtual connection limits remain hard limits and are not overridden.
     type: bool
@@ -91,7 +86,7 @@ options:
     default: Common
   state:
     description:
-      - When C(present), ensures that the profile exists.
+      - When C(present), ensures the profile exists.
       - When C(absent), ensures the profile is removed.
     type: str
     choices:
@@ -165,7 +160,7 @@ rule:
   type: str
   sample: /Common/_sys_https_redirect
 '''
-
+from datetime import datetime
 from ansible.module_utils.basic import (
     AnsibleModule, env_fallback
 )
@@ -174,6 +169,8 @@ from ..module_utils.bigip import F5RestClient
 from ..module_utils.common import (
     F5ModuleError, AnsibleF5Parameters, transform_name, f5_argument_spec, flatten_boolean, fq_name
 )
+from ..module_utils.icontrol import tmos_version
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -398,6 +395,8 @@ class ModuleManager(object):
         return False
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         changed = False
         result = dict()
         state = self.want.state
@@ -412,6 +411,7 @@ class ModuleManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, version)
         return result
 
     def _announce_deprecations(self, result):

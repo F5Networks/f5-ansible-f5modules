@@ -7,16 +7,11 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['preview'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_monitor_tcp_half_open
-short_description: Manages F5 BIG-IP LTM tcp half-open monitors
-description: Manages F5 BIG-IP LTM tcp half-open monitors.
+short_description: Manages F5 BIG-IP LTM TCP half-open monitors
+description: Manages F5 BIG-IP LTM TCP half-open monitors.
 version_added: "1.0.0"
 options:
   name:
@@ -38,23 +33,21 @@ options:
   ip:
     description:
       - IP address part of the IP/port definition. If this parameter is not
-        provided when creating a new monitor, then the default value will be
-        '*'.
+        provided when creating a new monitor, the default value is '*'.
       - If this value is an IP address, and the C(type) is C(tcp) (the default),
         then a C(port) number must be specified.
     type: str
   port:
     description:
       - Port address part of the IP/port definition. If this parameter is not
-        provided when creating a new monitor, then the default value will be
-        '*'. Note that if specifying an IP address, a value between 1 and 65535
-        must be specified
+        provided when creating a new monitor, the default value is '*'.
+        If specifying an IP address, you must specify a value between 1 and 65535.
     type: str
   interval:
     description:
       - The interval specifying how frequently the monitor instance of this
         template will run. If this parameter is not provided when creating
-        a new monitor, then the default value will be 5. This value B(must)
+        a new monitor, the default value is 5. This value B(must)
         be less than the C(timeout) value.
     type: int
   timeout:
@@ -63,17 +56,17 @@ options:
         the monitor request. If the target responds within the set time
         period, it is considered up. If the target does not respond within
         the set time period, it is considered down. You can change this
-        number to any number you want, however, it should be 3 times the
+        to any number, however, it should be 3 times the
         interval number of seconds plus 1 second. If this parameter is not
-        provided when creating a new monitor, then the default value will be 16.
+        provided when creating a new monitor, then the default value is 16.
     type: int
   time_until_up:
     description:
       - Specifies the amount of time in seconds after the first successful
-        response before a node will be marked up. A value of 0 will cause a
+        response before a node will be marked up. A value of C(0) will cause a
         node to be marked up immediately after a valid response is received
         from the node. If this parameter is not provided when creating
-        a new monitor, then the default value will be 0.
+        a new monitor, the default value is be 0.
     type: int
   partition:
     description:
@@ -82,7 +75,7 @@ options:
     default: Common
   state:
     description:
-      - When C(present), ensures that the monitor exists.
+      - When C(present), ensures the monitor exists.
       - When C(absent), ensures the monitor is removed.
     type: str
     choices:
@@ -164,6 +157,7 @@ time_until_up:
 '''
 
 import os
+from datetime import datetime
 
 from ansible.module_utils.basic import (
     AnsibleModule, env_fallback
@@ -175,6 +169,8 @@ from ..module_utils.common import (
 )
 from ..module_utils.compare import cmp_str_with_none
 from ..module_utils.ipaddress import is_valid_ip
+from ..module_utils.icontrol import tmos_version
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -435,6 +431,8 @@ class ModuleManager(object):
         return False
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         changed = False
         result = dict()
         state = self.want.state
@@ -449,6 +447,7 @@ class ModuleManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, version)
         return result
 
     def _announce_deprecations(self, result):

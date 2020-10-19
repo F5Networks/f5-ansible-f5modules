@@ -7,11 +7,6 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['stableinterface'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_message_routing_route
@@ -27,12 +22,12 @@ options:
     type: str
   description:
     description:
-      - The user defined description of the static route.
+      - The user-defined description of the static route.
     type: str
   type:
     description:
       - Parameter used to specify the type of the route to manage.
-      - Default setting is C(generic) with more options added in future.
+      - Default setting is C(generic) with more options coming.
     type: str
     choices:
       - generic
@@ -69,7 +64,7 @@ options:
     default: Common
   state:
     description:
-      - When C(present), ensures that the route exists.
+      - When C(present), ensures the route exists.
       - When C(absent), ensures the route is removed.
     type: str
     choices:
@@ -121,7 +116,7 @@ EXAMPLES = r'''
 
 RETURN = r'''
 description:
-  description: The user defined description of the route.
+  description: The user-defined description of the route.
   returned: changed
   type: str
   sample: Some description
@@ -146,7 +141,7 @@ peers:
   type: list
   sample: ['/Common/peer1', '/Common/peer2']
 '''
-
+from datetime import datetime
 from ansible.module_utils.basic import (
     AnsibleModule, env_fallback
 )
@@ -160,6 +155,7 @@ from ..module_utils.compare import (
     cmp_simple_list, cmp_str_with_none
 )
 from ..module_utils.icontrol import tmos_version
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -167,7 +163,6 @@ class Parameters(AnsibleF5Parameters):
         'peerSelectionMode': 'peer_selection_mode',
         'sourceAddress': 'src_address',
         'destinationAddress': 'dst_address',
-
     }
 
     api_attributes = [
@@ -315,6 +310,8 @@ class BaseManager(object):
             )
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         changed = False
         result = dict()
         state = self.want.state
@@ -329,6 +326,7 @@ class BaseManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, version)
         return result
 
     def present(self):

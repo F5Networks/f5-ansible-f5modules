@@ -7,11 +7,6 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['preview'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_file_copy
@@ -39,10 +34,10 @@ options:
       - There are several different datastores and each of them allows files
         to be exposed in different ways.
       - When C(external-monitor), the specified file will be stored as
-        an external monitor file and be available for use in external monitors
+        an external monitor file and be available for use in external monitors.
       - When C(ifile), the specified file will be stored as an iFile.
-      - When C(lw4o6-table), the specified file will be store as an Lightweight 4
-        over 6 (lw4o6) tunnel binding table, which include an IPv6 address for the
+      - When C(lw4o6-table), the specified file will be stored as a Lightweight 4
+        over 6 (lw4o6) tunnel binding table, which includes an IPv6 address for the
         lwB4, public IPv4 address, and restricted port set.
     type: str
     choices:
@@ -52,9 +47,9 @@ options:
     default: ifile
   force:
     description:
-      - Force overwrite a file.
+      - Force overwriting a file.
       - By default, files will only be overwritten if the SHA of the file is different
-        for the given filename. This parameter can be used to force overwrite the file
+        for the given filename. This parameter can be used to force overwriting the file
         even if it already exists and its SHA matches.
       - The C(lw4o6-table) datastore does not keep checksums of its file. Therefore, you
         would need to provide this argument to update any of these files.
@@ -66,7 +61,7 @@ options:
     default: Common
   state:
     description:
-      - When C(present), ensures that the resource exists.
+      - When C(present), ensures the resource exists.
       - When C(absent), ensures the resource is removed.
     type: str
     choices:
@@ -127,6 +122,7 @@ RETURN = r'''
 
 import hashlib
 import os
+from datetime import datetime
 
 from ansible.module_utils.basic import (
     AnsibleModule, env_fallback
@@ -136,7 +132,10 @@ from ..module_utils.bigip import F5RestClient
 from ..module_utils.common import (
     F5ModuleError, AnsibleF5Parameters, transform_name, f5_argument_spec
 )
-from ..module_utils.icontrol import upload_file
+from ..module_utils.icontrol import (
+    upload_file, tmos_version
+)
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -289,6 +288,8 @@ class BaseManager(object):
         return False
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         changed = False
         result = dict()
         state = self.want.state
@@ -303,6 +304,7 @@ class BaseManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, version)
         return result
 
     def _announce_deprecations(self, result):

@@ -7,17 +7,12 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['stableinterface'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_gtm_global
 short_description: Manages global GTM settings
 description:
-  - Manages global GTM settings. These settings include general, load balancing, and metrics
+  - Manages global BIG-IP GTM (now BIG-IP DNS) settings. These settings include general, load balancing, and metrics
     related settings.
 version_added: "1.0.0"
 options:
@@ -27,7 +22,7 @@ options:
       - When you enable synchronization, the system periodically queries other systems in
         the synchronization group to obtain and distribute configuration and metrics collection
         updates.
-      - The synchronization group may contain systems configured as Global Traffic Manager and
+      - The synchronization group may contain systems configured as Global Traffic Manager (DNS) and
         Link Controller systems.
     type: bool
   synchronization_group_name:
@@ -36,7 +31,7 @@ options:
     type: str
   synchronize_zone_files:
     description:
-      - Specifies that the system synchronizes Domain Name System (DNS) zone files among the
+      - Specifies the system synchronizes Domain Name System (DNS) zone files among the
         synchronization group members.
     type: bool
 extends_documentation_fragment: f5networks.f5_modules.f5
@@ -71,19 +66,22 @@ synchronization_group_name:
   type: str
   sample: my-group
 synchronize_zone_files:
-  description: Whether or not the system will sync zone files.
+  description: Whether or not the system will synchronize zone files.
   returned: changed
   type: str
   sample: my-group
 '''
-
+from datetime import datetime
 from ansible.module_utils.basic import AnsibleModule
 
 from ..module_utils.bigip import F5RestClient
 from ..module_utils.common import (
     F5ModuleError, AnsibleF5Parameters, f5_argument_spec
 )
-from ..module_utils.icontrol import module_provisioned
+from ..module_utils.icontrol import (
+    module_provisioned, tmos_version
+)
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -242,7 +240,9 @@ class ModuleManager(object):
                 version=warning['version']
             )
 
-    def exec_module(self):  # lgtm [py/similar-function]
+    def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         if not module_provisioned(self.client, 'gtm'):
             raise F5ModuleError(
                 "GTM must be provisioned to use this module."
@@ -256,6 +256,7 @@ class ModuleManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, version)
         return result
 
     def present(self):

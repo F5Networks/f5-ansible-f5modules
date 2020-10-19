@@ -7,11 +7,6 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['preview'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigiq_device_discovery
@@ -44,11 +39,11 @@ options:
     description:
       - DSC cluster name of the BIG-IP device to be managed.
       - This is optional if the managed device is not a part of a cluster group.
-      - When C(use_bigiq_sync) is set to C(yes) then this parameter becomes mandatory.
+      - When C(use_bigiq_sync) is set to C(yes), this parameter is required.
     type: str
   use_bigiq_sync:
     description:
-      - When set to true, BIG-IQ will manually synchronize configuration changes
+      - When set to true, BIG-IQ manually synchronizes configuration changes
         between members in a DSC cluster.
     type: bool
     default: no
@@ -80,7 +75,7 @@ options:
     default: use_bigiq
   access_conflict_policy:
     description:
-      - Sets the conflict resolution policy for Access module C(apm) objects, only used when C(apm) module is specified.
+      - Sets the conflict resolution policy for Access module C(apm) objects. Only used when the C(apm) module is specified.
     type: str
     choices:
       - use_bigiq
@@ -88,7 +83,7 @@ options:
       - keep_version
   access_group_name:
     description:
-      - Access group name to import Access configuration for devices, once set it cannot be changed.
+      - Access group name to import Access configuration for devices. Once set it cannot be changed.
     type: str
   access_group_first_device:
     description:
@@ -98,15 +93,15 @@ options:
     default: yes
   force:
     description:
-      - Forces rediscovery and import of existing modules on the managed BIG-IP
+      - Forces rediscovery and import of existing modules on the managed BIG-IP.
     type: bool
     default: no
   modules:
     description:
       - List of modules to be discovered and imported into the device.
-      - These modules must be provisioned on the target device otherwise operation will fail.
+      - These modules must be provisioned on the target device, otherwise operation will fail.
       - The C(ltm) module must always be specified when performing discovery or re-discovery of the the device.
-      - When C(asm) or C(afm) are specified C(shared_security) module needs to also be declared.
+      - When C(asm) or C(afm) are specified, the C(shared_security) module also needs to be declared.
     type: list
     elements: str
     choices:
@@ -124,12 +119,12 @@ options:
     suboptions:
       enable:
         description:
-          - Enables statistics collection on a device
+          - Enables statistics collection on a device.
         type: bool
         default: no
       interval:
         description:
-          - Specify the interval in seconds the data is collected from the discovered device.
+          - Specifies the interval the data is collected from the discovered device, in seconds.
         type: int
         default: 60
         choices:
@@ -139,7 +134,7 @@ options:
           - 500
       zone:
         description:
-          - Specify in which DCD zone is collecting the data from device.
+          - Specifies in which DCD zone is collecting the data from device.
         type: str
         default: default
       stat_modules:
@@ -242,7 +237,7 @@ ha_name:
   type: str
   sample: GROUP_1
 use_bigiq_sync:
-  description: Indicate if BIG-IQ should manually synchronise DSC configuration.
+  description: Indicates if BIG-IQ should manually synchronize DSC configuration.
   returned: changed
   type: bool
   sample: yes
@@ -285,7 +280,9 @@ modules:
 '''
 
 import time
+from datetime import datetime
 from distutils.version import LooseVersion
+
 from ansible.module_utils.basic import AnsibleModule
 
 from ..module_utils.bigip import F5RestClient
@@ -294,6 +291,7 @@ from ..module_utils.common import (
 )
 from ..module_utils.icontrol import bigiq_version
 from ..module_utils.ipaddress import is_valid_ip
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -655,15 +653,16 @@ class ModuleManager(object):
                 version=warning['version']
             )
 
-    def check_bigiq_version(self):
-        version = bigiq_version(self.client)
+    def check_bigiq_version(self, version):
         if LooseVersion(version) < LooseVersion('6.1.0'):
             raise F5ModuleError(
                 'Module supports only BIGIQ version 6.1.x or higher.'
             )
 
     def exec_module(self):
-        self.check_bigiq_version()
+        start = datetime.now().isoformat()
+        version = bigiq_version(self.client)
+        self.check_bigiq_version(version)
         changed = False
         result = dict()
         state = self.want.state
@@ -678,6 +677,7 @@ class ModuleManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, version)
         return result
 
     def present(self):

@@ -7,49 +7,44 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['stableinterface'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_remote_syslog
 short_description: Manipulate remote syslog settings on a BIG-IP
 description:
-  - Manipulate remote syslog settings on a BIG-IP.
+  - Manipulate remote syslog settings on a BIG-IP system.
 version_added: "1.0.0"
 options:
   remote_host:
     description:
-      - Specifies the IP address, or hostname, for the remote system to
+      - Specifies the IP address or hostname for the remote system, to
         which the system sends log messages.
     type: str
     required: True
   name:
     description:
       - Specifies the name of the syslog object.
-      - This option is required when multiple C(remote_host) with the same IP
+      - This option is required when multiple C(remote_host)s with the same IP
         or hostname are present on the device.
-      - If C(name) is not provided C(remote_host) is used by default.
+      - If C(name) is not provided, C(remote_host) is used by default.
     type: str
   remote_port:
     description:
-      - Specifies the port that the system uses to send messages to the
+      - Specifies the port the system uses to send messages to the
         remote logging server.
       - When creating a remote syslog, if this parameter is not specified, the
-        default value C(514) is used.
+        default value is C(514).
     type: str
   local_ip:
     description:
       - Specifies the local IP address of the system that is logging. To
         provide no local IP, specify the value C(none).
       - When creating a remote syslog, if this parameter is not specified, the
-        default value C(none) is used.
+        default value is C(none).
     type: str
   state:
     description:
-      - When C(present), guarantees that the remote syslog exists with the provided
+      - When C(present), guarantees the remote syslog exists with the provided
         attributes.
       - When C(absent), removes the remote syslog from the system.
     type: str
@@ -91,11 +86,12 @@ remote_port:
   type: int
   sample: 514
 local_ip:
-  description: The new local IP of the remote syslog server
+  description: The new local IP of the remote syslog server.
   returned: changed
   type: str
   sample: 10.10.10.10
 '''
+from datetime import datetime
 
 from ansible.module_utils.basic import AnsibleModule
 from ansible.module_utils.six import iteritems
@@ -105,6 +101,8 @@ from ..module_utils.common import (
     F5ModuleError, AnsibleF5Parameters, f5_argument_spec, fq_name, is_valid_hostname
 )
 from ..module_utils.ipaddress import is_valid_ip
+from ..module_utils.icontrol import tmos_version
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -296,6 +294,8 @@ class ModuleManager(object):
         return result
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         result = dict()
 
         changed = self.present()
@@ -305,6 +305,7 @@ class ModuleManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, version)
         return result
 
     def present(self):

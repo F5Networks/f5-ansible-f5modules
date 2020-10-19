@@ -7,18 +7,13 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['stableinterface'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_service_policy
 short_description: Manages service policies on a BIG-IP.
 description:
-  - Service policies allow you to configure timers and port misuse rules,
-    if enabled, on a per rule or per context basis.
+  - Service policies allow you to configure timers and port misuse rules
+    (if enabled) on a per rule or per context basis.
 version_added: "1.0.0"
 options:
   name:
@@ -37,8 +32,8 @@ options:
   port_misuse_policy:
     description:
       - The port misuse policy to attach to the service policy.
-      - Requires that C(afm) be provisioned to use. If C(afm) is not provisioned, this parameter
-        will be ignored.
+      - Requires C(afm) (Advanced Firewall Manager) be provisioned to use. If C(afm) is not provisioned, this parameter
+        is ignored.
     type: str
   state:
     description:
@@ -92,6 +87,7 @@ description:
   type: str
   sample: My service policy description
 '''
+from datetime import datetime
 
 from ansible.module_utils.basic import (
     AnsibleModule, env_fallback
@@ -101,7 +97,10 @@ from ..module_utils.bigip import F5RestClient
 from ..module_utils.common import (
     F5ModuleError, AnsibleF5Parameters, transform_name, f5_argument_spec, fq_name
 )
-from ..module_utils.icontrol import module_provisioned
+from ..module_utils.icontrol import (
+    module_provisioned, tmos_version
+)
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -234,6 +233,8 @@ class ModuleManager(object):
         return False
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         changed = False
         result = dict()
         state = self.want.state
@@ -248,6 +249,7 @@ class ModuleManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, version)
         return result
 
     def _announce_deprecations(self, result):

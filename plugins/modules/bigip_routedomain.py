@@ -7,17 +7,14 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['stableinterface'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_routedomain
 short_description: Manage route domains on a BIG-IP
 description:
-  - Manage route domains on a BIG-IP.
+  - Manage route domains on a BIG-IP system. A route domain is a BIG-IP
+    configuration object that isolates network traffic for a particular
+    application on the network.
 version_added: "1.0.0"
 options:
   name:
@@ -59,7 +56,7 @@ options:
     type: str
   partition:
     description:
-      - Partition to create the route domain on. Partitions cannot be updated
+      - Partition on which you want to create the route domain. Partitions cannot be updated
         once they are created.
     type: str
     default: Common
@@ -101,7 +98,7 @@ options:
     elements: str
   fw_enforced_policy:
     description:
-      - Specifies AFM policy to be attached to route domain.
+      - Specifies an AFM policy to be attached to route domain.
     type: str
 extends_documentation_fragment: f5networks.f5_modules.f5
 author:
@@ -157,7 +154,7 @@ parent:
   type: int
   sample: 0
 vlans:
-  description: List of new VLANs the route domain is applied to.
+  description: List of new VLANs to which the route domain is applied.
   returned: changed
   type: list
   sample: ['/Common/http-tunnel', '/Common/socks-tunnel']
@@ -187,12 +184,12 @@ service_policy:
   type: str
   sample: /Common-my-service-policy
 fw_enforced_policy:
-  description: Specfies AFM policy to be attached to route domain.
+  description: Specifies the AFM policy to be attached to route domain.
   returned: changed
   type: str
   sample: /Common/afm-blocking-policy
 '''
-
+from datetime import datetime
 
 from ansible.module_utils.basic import (
     AnsibleModule, env_fallback
@@ -203,6 +200,8 @@ from ..module_utils.common import (
     F5ModuleError, AnsibleF5Parameters, transform_name, f5_argument_spec, fq_name
 )
 from ..module_utils.compare import cmp_simple_list
+from ..module_utils.icontrol import tmos_version
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -485,6 +484,8 @@ class ModuleManager(object):
         return False
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         changed = False
         result = dict()
         state = self.want.state
@@ -499,6 +500,7 @@ class ModuleManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, version)
         return result
 
     def _announce_deprecations(self, result):

@@ -7,25 +7,20 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['stableinterface'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_snmp_community
 short_description: Manages SNMP communities on a BIG-IP.
 description:
-  - Assists in managing SNMP communities on a BIG-IP. Different SNMP versions are supported
-    by this module. Take note of the different parameters offered by this module, as different
-    parameters work for different versions of SNMP. Typically this becomes an interest if you
+  - Assists in managing Simple Network Management Protocol (SNMP) communities on a BIG-IP system. Different SNMP versions are supported
+    by this module. Note the different parameters offered by this module, as different
+    parameters work for different versions of SNMP. This is important if you
     are mixing versions C(v2c) and C(3).
 version_added: "1.0.0"
 options:
   state:
     description:
-      - When C(present), ensures that the address list and entries exists.
+      - When C(present), ensures the address list and entries exists.
       - When C(absent), ensures the address list is removed.
     type: str
     choices:
@@ -34,7 +29,7 @@ options:
     default: present
   version:
     description:
-      - Specifies to which Simple Network Management Protocol (SNMP) version the trap destination applies.
+      - Specifies to which SNMP version the trap destination applies.
     type: str
     choices:
       - v1
@@ -46,31 +41,31 @@ options:
       - Name that identifies the SNMP community.
       - When C(version) is C(v1) or C(v2c), this parameter is required.
       - The name C(public) is a reserved name on the BIG-IP. This module handles that name differently
-        than others. Functionally, you should not see a difference however.
+        than others. Functionally, you should not see a difference.
     type: str
   community:
     description:
       - Specifies the community string (password) for access to the MIB.
-      - This parameter is only relevant when C(version) is C(v1), or C(v2c). If C(version) is
+      - This parameter is only relevant when C(version) is C(v1) or C(v2c). If C(version) is
         something else, this parameter is ignored.
     type: str
   source:
     description:
       - Specifies the source address for access to the MIB.
       - This parameter can accept a value of C(all).
-      - If this parameter is not specified, the value C(all) is used.
-      - This parameter is only relevant when C(version) is C(v1), or C(v2c). If C(version) is
+      - If this parameter is not specified, the value is C(all).
+      - This parameter is only relevant when C(version) is C(v1) or C(v2c). If C(version) is
         something else, this parameter is ignored.
-      - If C(source) is set to C(all), then it is not possible to specify an C(oid). This will
+      - If C(source) is set to C(all), it is not possible to specify an C(oid). This will
         raise an error.
-      - This parameter should be provided when C(state) is C(absent), so that the correct community
+      - You should provide this parameter when C(state) is C(absent), so the correct community
         is removed. To remove the C(public) SNMP community that comes with a BIG-IP, this parameter
-        should be set to C(default).
+        should be C(default).
     type: str
   port:
     description:
       - Specifies the port for the trap destination.
-      - This parameter is only relevant when C(version) is C(v1), or C(v2c). If C(version) is
+      - This parameter is only relevant when C(version) is C(v1) or C(v2c). If C(version) is
         something else, this parameter is ignored.
     type: int
   oid:
@@ -84,8 +79,8 @@ options:
     description:
       - Specifies the user's access level to the MIB.
       - When creating a new community, if this parameter is not specified, the default is C(ro).
-      - When C(ro), specifies that the user can view the MIB, but cannot modify the MIB.
-      - When C(rw), specifies that the user can view and modify the MIB.
+      - When C(ro), specifies the user can view the MIB, but cannot modify the MIB.
+      - When C(rw), specifies the user can view and modify the MIB.
     type: str
     choices:
       - ro
@@ -95,9 +90,8 @@ options:
   ip_version:
     description:
       - Specifies whether the record applies to IPv4 or IPv6 addresses.
-      - When creating a new community, if this value is not specified, the default of C(4) will
-        be used.
-      - This parameter is only relevant when C(version) is C(v1), or C(v2c). If C(version) is
+      - When creating a new community, if this value is not specified, the default is C(4).
+      - This parameter is only relevant when C(version) is C(v1) or C(v2c). If C(version) is
         something else, this parameter is ignored.
     type: str
     choices:
@@ -114,11 +108,11 @@ options:
   snmp_auth_protocol:
     description:
       - Specifies the authentication method for the user.
-      - When C(md5), specifies that the system uses the MD5 algorithm to authenticate the user.
-      - When C(sha), specifies that the secure hash algorithm (SHA) to authenticate the user.
-      - When C(none), specifies that user does not require authentication.
+      - When C(md5), specifies the system uses the MD5 algorithm to authenticate the user.
+      - When C(sha), specifies the secure hash algorithm (SHA) to authenticate the user.
+      - When C(none), specifies the user does not require authentication.
       - When creating a new SNMP C(v3) community, if this parameter is not specified, the default
-        of C(sha) will be used.
+        is C(sha).
     type: str
     choices:
       - md5
@@ -133,13 +127,13 @@ options:
   snmp_privacy_protocol:
     description:
       - Specifies the encryption protocol.
-      - When C(aes), specifies that the system encrypts the user information using AES
+      - When C(aes), specifies the system encrypts the user information using AES
         (Advanced Encryption Standard).
-      - When C(des), specifies that the system encrypts the user information using DES
+      - When C(des), specifies the system encrypts the user information using DES
         (Data Encryption Standard).
-      - When C(none), specifies that the system does not encrypt the user information.
+      - When C(none), specifies the system does not encrypt the user information.
       - When creating a new SNMP C(v3) community, if this parameter is not specified, the
-        default of C(aes) will be used.
+        default is C(aes).
     type: str
     choices:
       - aes
@@ -153,8 +147,8 @@ options:
     type: str
   update_password:
     description:
-      - C(always) will allow to update passwords if the user chooses to do so.
-        C(on_create) will only set the password for newly created resources.
+      - C(always) allows users to update passwords.
+        C(on_create) only sets the password for newly created resources.
     type: str
     choices:
       - always
@@ -266,6 +260,7 @@ snmp_privacy_password:
   type: str
   sample: secret2
 '''
+from datetime import datetime
 
 from ansible.module_utils.basic import (
     AnsibleModule, env_fallback
@@ -275,6 +270,8 @@ from ..module_utils.bigip import F5RestClient
 from ..module_utils.common import (
     F5ModuleError, AnsibleF5Parameters, transform_name, f5_argument_spec
 )
+from ..module_utils.icontrol import tmos_version
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -567,6 +564,8 @@ class BaseManager(object):
         return False
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         changed = False
         result = dict()
         state = self.want.state
@@ -581,6 +580,7 @@ class BaseManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, version)
         return result
 
     def _announce_deprecations(self, result):

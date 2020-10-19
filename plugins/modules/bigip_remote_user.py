@@ -7,17 +7,12 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['stableinterface'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_remote_user
 short_description: Manages default settings for remote user accounts on a BIG-IP
 description:
-  - Manages default settings for remote user accounts on a BIG-IP.
+  - Manages the default settings for remote user accounts on a BIG-IP system.
 version_added: "1.0.0"
 options:
   default_role:
@@ -54,7 +49,7 @@ options:
     type: bool
   description:
     description:
-      - User defined description.
+      - User-defined description.
     type: str
 extends_documentation_fragment: f5networks.f5_modules.f5
 author:
@@ -109,16 +104,17 @@ default_partition:
   type: str
   sample: Common
 console_access:
-  description: The default console access for all remote user accounts
+  description: The default console access for all remote user accounts.
   returned: changed
   type: bool
   sample: no
 description:
-  description: The user defined description.
+  description: The user-defined description.
   returned: changed
   type: str
   sample: Foo is bar
 '''
+from datetime import datetime
 
 from ansible.module_utils.basic import AnsibleModule
 
@@ -127,6 +123,8 @@ from ..module_utils.common import (
     F5ModuleError, AnsibleF5Parameters, f5_argument_spec, flatten_boolean
 )
 from ..module_utils.compare import cmp_str_with_none
+from ..module_utils.icontrol import tmos_version
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -262,6 +260,8 @@ class ModuleManager(object):
             )
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         result = dict()
 
         changed = self.update()
@@ -271,6 +271,7 @@ class ModuleManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, version)
         return result
 
     def should_update(self):

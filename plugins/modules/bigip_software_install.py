@@ -7,17 +7,12 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['preview'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_software_install
 short_description: Install software images on a BIG-IP
 description:
-  - Install new images on a BIG-IP.
+  - Install new software images on a BIG-IP system.
 version_added: "1.0.0"
 options:
   image:
@@ -27,18 +22,18 @@ options:
   block_device_image:
     description:
       - Image to install on the remote device. In the case of a VCMP guest,
-        please ensure that this image is present on the VCMP host and is
+        ensure this image is present on the VCMP host and is
         referenced from there, and not from the VCMP guest. An ISO image
         directly uploaded to the VCMP guest will not work.
     type: str
     version_added: "1.2.0"
   volume:
     description:
-      - The volume to install the software image to.
+      - The volume on which to install the software image.
     type: str
   state:
     description:
-      - When C(installed), ensures that the software is installed on the volume
+      - When C(installed), ensures the software is installed on the volume
         and the volume is set to be booted from. The device is B(not) rebooted
         into the new software.
       - When C(activated), performs the same operation as C(installed), but
@@ -106,6 +101,7 @@ RETURN = r'''
 
 import time
 import ssl
+from datetime import datetime
 
 from ansible.module_utils.six.moves.urllib.error import URLError
 from ansible.module_utils.urls import urlparse
@@ -115,6 +111,8 @@ from ..module_utils.bigip import F5RestClient
 from ..module_utils.common import (
     F5ModuleError, AnsibleF5Parameters, transform_name, f5_argument_spec
 )
+from ..module_utils.icontrol import tmos_version
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -435,6 +433,8 @@ class ModuleManager(object):
         return False
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         result = dict()
 
         changed = self.present()
@@ -444,6 +444,7 @@ class ModuleManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, version)
         return result
 
     def _announce_deprecations(self, result):

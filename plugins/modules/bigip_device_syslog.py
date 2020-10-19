@@ -7,11 +7,6 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['stableinterface'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_device_syslog
@@ -276,7 +271,7 @@ EXAMPLES = r'''
 
 RETURN = r'''
 auth_priv_from:
-  description: The new lowest user authentication logging level
+  description: The new lowest user authentication logging level.
   returned: changed
   type: str
   sample: alert
@@ -286,12 +281,12 @@ auth_priv_to:
   type: str
   sample: emerg
 console_log:
-  description: Whether logging to console is enabled or not.
+  description: Whether logging to the console is enabled or not.
   returned: changed
   type: bool
   sample: yes
 iso_date:
-  description: Whether ISO date format in logs is enabled or not
+  description: Whether ISO date format in logs is enabled or not.
   returned: changed
   type: bool
   sample: no
@@ -371,7 +366,7 @@ user_log_to:
   type: str
   sample: alert
 '''
-
+from datetime import datetime
 from ansible.module_utils.basic import AnsibleModule
 
 from ..module_utils.bigip import F5RestClient
@@ -379,6 +374,8 @@ from ..module_utils.common import (
     F5ModuleError, AnsibleF5Parameters, flatten_boolean, f5_argument_spec
 )
 from ..module_utils.compare import cmp_str_with_none
+from ..module_utils.icontrol import tmos_version
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -603,6 +600,8 @@ class ModuleManager(object):
         return False
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         result = dict()
 
         changed = self.present()
@@ -612,6 +611,7 @@ class ModuleManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, version)
         return result
 
     def _announce_deprecations(self, result):

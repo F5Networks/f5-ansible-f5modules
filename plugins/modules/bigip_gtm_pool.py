@@ -7,24 +7,19 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['preview'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_gtm_pool
 short_description: Manages F5 BIG-IP GTM pools
 description:
-    - Manages F5 BIG-IP GTM pools.
+    - Manages F5 BIG-IP GTM (now BIG-IP DNS) pools.
 version_added: "1.0.0"
 options:
   state:
     description:
-      - Pool state. When C(present), ensures that the pool is created and enabled.
-        When C(absent), ensures that the pool is removed from the system. When
-        C(enabled) or C(disabled), ensures that the pool is enabled or disabled
+      - Pool state. When C(present), ensures the pool is created and enabled.
+        When C(absent), ensures the pool is removed from the system. When
+        C(enabled) or C(disabled), ensures the pool is enabled or disabled
         (respectively) on the remote device.
     type: str
     choices:
@@ -35,7 +30,7 @@ options:
     default: present
   preferred_lb_method:
     description:
-      - The load balancing mode that the system tries first.
+      - The load balancing mode the system tries first.
     type: str
     choices:
       - round-robin
@@ -58,7 +53,7 @@ options:
       - virtual-server-score
   alternate_lb_method:
     description:
-      - The load balancing mode that the system tries if the
+      - The load balancing mode the system tries if the
         C(preferred_lb_method) is unsuccessful in picking a pool.
     type: str
     choices:
@@ -76,7 +71,7 @@ options:
       - virtual-server-score
   fallback_lb_method:
     description:
-      - The load balancing mode that the system tries if both the
+      - The load balancing mode the system tries if both the
         C(preferred_lb_method) and C(alternate_lb_method)s are unsuccessful
         in picking a pool.
     type: str
@@ -102,14 +97,14 @@ options:
       - none
   fallback_ip:
     description:
-      - Specifies the IPv4, or IPv6 address of the server to which the system
+      - Specifies the IPv4 or IPv6 address of the server to which the system
         directs requests when it cannot use one of its pools to do so.
         Note that the system uses the fallback IP only if you select the
         C(fallback_ip) load balancing method.
     type: str
   type:
     description:
-      - The type of GTM pool that you want to create. On BIG-IP releases
+      - The type of GTM pool you want to create. On BIG-IP releases
         prior to version 12, this parameter is not required. On later versions
         of BIG-IP, this is a required parameter.
     type: str
@@ -133,7 +128,7 @@ options:
   members:
     description:
       - Members to assign to the pool.
-      - The order of the members in this list is the order that they will be listed in the pool.
+      - The order of the members in this list is the order they will be listed in the pool.
     suboptions:
       server:
         description:
@@ -142,21 +137,21 @@ options:
         required: True
       virtual_server:
         description:
-          - Name of the virtual server, associated with the server, that the pool member is a part of.
+          - Name of the virtual server, associated with the server, the pool member is a part of.
         type: str
         required: True
     type: list
     elements: dict
   monitors:
     description:
-      - Specifies the health monitors that the system currently uses to monitor this resource.
+      - Specifies the health monitors the system currently uses to monitor this resource.
       - When C(availability_requirements.type) is C(require), you may only have a single monitor in the
         C(monitors) list.
     type: list
     elements: str
   availability_requirements:
     description:
-      - Specifies, if you activate more than one health monitor, the number of health
+      - If you activate more than one health monitor, specifies the number of health
         monitors that must receive successful responses in order for the link to be
         considered available.
     suboptions:
@@ -180,7 +175,7 @@ options:
       number_of_probes:
         description:
           - Specifies the minimum number of probes that must succeed for this server to be declared up.
-          - When creating a new virtual server, if this parameter is specified, then the C(number_of_probers)
+          - When creating a new virtual server, if this parameter is specified, the C(number_of_probers)
             parameter must also be specified.
           - The value of this parameter should always be B(lower) than, or B(equal to),
             the value of C(number_of_probers).
@@ -190,7 +185,7 @@ options:
       number_of_probers:
         description:
           - Specifies the number of probers that should be used when running probes.
-          - When creating a new virtual server, if this parameter is specified, then the C(number_of_probes)
+          - When creating a new virtual server, if this parameter is specified, the C(number_of_probes)
             parameter must also be specified.
           - The value of this parameter should always be B(higher) than, or B(equal to),
             the value of C(number_of_probers).
@@ -200,12 +195,12 @@ options:
     type: dict
   max_answers_returned:
     description:
-      - Specifies the maximum number of available virtual servers that the system lists in a response.
+      - Specifies the maximum number of available virtual servers the system lists in a response.
       - The maximum is 500.
     type: int
   ttl:
     description:
-      - Specifies the number of seconds that the IP address, once found, is valid.
+      - Specifies the number of seconds the IP address, once found, is valid.
     type: int
 notes:
   - Support for TMOS versions below v12.x has been deprecated for this module, and will be removed in f5_modules 1.4.
@@ -284,6 +279,7 @@ max_answers_returned:
 
 import copy
 import re
+from datetime import datetime
 
 from ansible.module_utils.basic import (
     AnsibleModule, env_fallback
@@ -298,6 +294,7 @@ from ..module_utils.icontrol import (
     module_provisioned, tmos_version
 )
 from ..module_utils.ipaddress import is_valid_ip
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -866,6 +863,8 @@ class BaseManager(object):
         return False
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         changed = False
         result = dict()
         state = self.want.state
@@ -880,6 +879,7 @@ class BaseManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, version)
         return result
 
     def _announce_deprecations(self, result):

@@ -7,11 +7,6 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['preview'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigiq_application_fasthttp
@@ -32,8 +27,8 @@ options:
     type: str
   servers:
     description:
-      - A list of servers that the application is hosted on.
-      - If you are familiar with other BIG-IP setting, you might also refer to this
+      - A list of servers on which the application is hosted.
+      - If you are familiar with other BIG-IP settings, you might also refer to this
         list as the list of pool members.
       - When creating a new application, at least one server is required.
     type: list
@@ -48,13 +43,13 @@ options:
         description:
           - The port of the server.
           - When creating a new application and specifying a server, if this parameter
-            is not provided, the default of C(80) will be used.
+            is not provided, the default is C(80).
         type: str
         default: 80
   inbound_virtual:
     description:
-      - Settings to configure the virtual which will receive the inbound connection.
-      - This virtual will be used to host the HTTP endpoint of the application.
+      - Settings to configure the virtual which receives the inbound connection.
+      - This virtual is used to host the HTTP endpoint of the application.
     suboptions:
       address:
         description:
@@ -71,24 +66,23 @@ options:
         required: True
       port:
         description:
-          - The port that the virtual listens for connections on.
+          - The port on which the virtual listens for connections.
           - When creating a new application, if this parameter is not specified, the
-            default value of C(80) will be used.
+            default value is C(80).
         type: str
         default: 80
     type: dict
   service_environment:
     description:
-      - Specifies the name of service environment that the application will be
-        deployed to.
+      - Specifies the name of the service environment to which the application is.
       - When creating a new application, this parameter is required.
-      - The service environment type will be discovered by this module automatically.
-        Therefore, it is crucial that you maintain unique names for items in the
+      - The service environment type is automatically discovered by this module.
+        Therefore, it is crucial you maintain unique names for items in the
         different service environment types (at this time, SSGs and BIGIPs).
     type: str
   add_analytics:
     description:
-      - Collects statistics of the BIG-IP that the application is deployed to.
+      - Collects statistics of the BIG-IP to which the application is deployed.
       - This parameter is only relevant when specifying a C(service_environment) which
         is a BIG-IP; not an SSG.
     type: bool
@@ -96,7 +90,7 @@ options:
   state:
     description:
       - The state of the resource on the system.
-      - When C(present), guarantees that the resource exists with the provided attributes.
+      - When C(present), guarantees the resource exists with the provided attributes.
       - When C(absent), removes the resource from the system.
     type: str
     choices:
@@ -105,15 +99,15 @@ options:
     default: present
   wait:
     description:
-      - If the module should wait for the application to be created, deleted or updated.
+      - If the module should wait for the application to be created, deleted, or updated.
     type: bool
     default: yes
 extends_documentation_fragment: f5networks.f5_modules.f5
 notes:
   - This module does not support updating of your application (whether deployed or not).
-    If you need to update the application, the recommended practice is to remove and
-    re-create.
-  - This module will not work on BIGIQ version 6.1.x or greater.
+    If you need to update the application, we recommended removing and
+    re-creating it.
+  - This module does not work on BIG-IQ version 6.1.x or greater.
 author:
   - Tim Rupp (@caphrim007)
 '''
@@ -149,7 +143,7 @@ description:
   type: str
   sample: My application
 service_environment:
-  description: The environment which the service was deployed to.
+  description: The environment to which the service was deployed.
   returned: changed
   type: str
   sample: my-ssg1
@@ -164,12 +158,12 @@ inbound_virtual_netmask:
   type: str
   sample: 255.255.255.0
 inbound_virtual_port:
-  description: The port the inbound virtual address listens on.
+  description: The port on which the inbound virtual address listens.
   returned: changed
   type: int
   sample: 80
 servers:
-  description: List of servers, and their ports, that make up the application.
+  description: List of servers and their ports that make up the application.
   type: complex
   returned: changed
   contains:
@@ -179,7 +173,7 @@ servers:
       type: str
       sample: 2.3.4.5
     port:
-      description: The port that the server listens on.
+      description: The port the server listens on.
       returned: changed
       type: int
       sample: 8080
@@ -187,8 +181,9 @@ servers:
 '''
 
 import time
-
+from datetime import datetime
 from distutils.version import LooseVersion
+
 from ansible.module_utils.basic import AnsibleModule
 
 from ..module_utils.bigip import F5RestClient
@@ -197,6 +192,7 @@ from ..module_utils.common import (
 )
 from ..module_utils.icontrol import bigiq_version
 from ..module_utils.ipaddress import is_valid_ip
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -522,15 +518,16 @@ class ModuleManager(object):
             return True
         return False
 
-    def check_bigiq_version(self):
-        version = bigiq_version(self.client)
+    def check_bigiq_version(self, version):
         if LooseVersion(version) >= LooseVersion('6.1.0'):
             raise F5ModuleError(
                 'Module supports only BIGIQ version 6.0.x or lower.'
             )
 
     def exec_module(self):
-        self.check_bigiq_version()
+        start = datetime.now().isoformat()
+        version = bigiq_version(self.client)
+        self.check_bigiq_version(version)
         changed = False
         result = dict()
         state = self.want.state
@@ -545,6 +542,7 @@ class ModuleManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, version)
         return result
 
     def _announce_deprecations(self, result):

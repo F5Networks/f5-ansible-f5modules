@@ -7,17 +7,12 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['stableinterface'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_sys_db
 short_description: Manage BIG-IP system database variables
 description:
-  - Manage BIG-IP system database variables
+  - Manage BIG-IP system database variables.
 version_added: "1.0.0"
 options:
   key:
@@ -28,7 +23,7 @@ options:
   state:
     description:
       - The state of the variable on the system. When C(present), guarantees
-        that an existing variable is set to C(value). When C(reset) sets the
+        an existing variable is set to C(value). When C(reset), sets the
         variable back to the default value. At least one of value and state
         C(reset) are required.
     type: str
@@ -42,7 +37,7 @@ options:
         are required.
     type: str
 notes:
-  - Requires BIG-IP version 12.0.0 or greater
+  - Requires BIG-IP version 12.0.0 or later.
 extends_documentation_fragment: f5networks.f5_modules.f5
 author:
   - Tim Rupp (@caphrim007)
@@ -82,21 +77,22 @@ EXAMPLES = r'''
 
 RETURN = r'''
 name:
-  description: The key in the system database that was specified
+  description: The key in the system database.
   returned: changed and success
   type: str
   sample: setup.run
 default_value:
-  description: The default value of the key
+  description: The default value of the key.
   returned: changed and success
   type: str
   sample: true
 value:
-  description: The value that you set the key to
+  description: The value that you set the key to.
   returned: changed and success
   type: str
   sample: false
 '''
+from datetime import datetime
 
 from ansible.module_utils.basic import AnsibleModule
 
@@ -104,6 +100,8 @@ from ..module_utils.bigip import F5RestClient
 from ..module_utils.common import (
     F5ModuleError, AnsibleF5Parameters, f5_argument_spec
 )
+from ..module_utils.icontrol import tmos_version
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -222,6 +220,8 @@ class ModuleManager(object):
         return False
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         changed = False
         result = dict()
         state = self.want.state
@@ -236,6 +236,7 @@ class ModuleManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, version)
         return result
 
     def present(self):

@@ -7,11 +7,6 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['preview'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_ssl_csr
@@ -23,7 +18,7 @@ version_added: "1.3.0"
 options:
   name:
     description:
-      - The name of the csr file.
+      - The name of the CSR file.
     type: str
     required: True
   common_name:
@@ -36,8 +31,8 @@ options:
     type: str
   state:
     description:
-      - When C(present), ensures that the resource exists.
-      - When C(absent), ensures that the resource does not exist.
+      - When C(present), ensures the resource exists.
+      - When C(absent), ensures the resource does not exist.
     type: str
     choices:
       - present
@@ -45,7 +40,7 @@ options:
     default: present
   dest:
     description:
-      - Destination on your local filesystem when you want to save the csr file.
+      - Destination on your local filesystem when you want to save the CSR file.
     type: path
     required: True
   force:
@@ -75,21 +70,22 @@ EXAMPLES = r'''
 
 RETURN = r'''
 csr_name:
-  description: The name of the CSR file that the user provided
+  description: The name of the CSR file.
   returned: created
   type: str
   sample: csr-name
 common_name:
-  description: The common name of the CSR file that the user provided
+  description: The common name of the CSR file.
   returned: created
   type: str
   sample: csr-name
 '''
 
 import os
+from datetime import datetime
+from distutils.version import LooseVersion
 
 from ansible.module_utils.basic import AnsibleModule
-from distutils.version import LooseVersion
 
 from ..module_utils.bigip import F5RestClient
 from ..module_utils.common import (
@@ -98,6 +94,7 @@ from ..module_utils.common import (
 from ..module_utils.icontrol import (
     download_file, tmos_version
 )
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -197,10 +194,13 @@ class ModuleManager(object):
             )
 
     def exec_module(self):
-        if self.version_is_less_than_14():
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
+        if self.version_is_less_than_14(version):
             raise F5ModuleError(
                 "This module requires TMOS version 14.x and above."
             )
+
         changed = False
         result = dict()
         state = self.want.state
@@ -215,10 +215,10 @@ class ModuleManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, version)
         return result
 
-    def version_is_less_than_14(self):
-        version = tmos_version(self.client)
+    def version_is_less_than_14(self, version):
         if LooseVersion(version) < LooseVersion('14.0.0'):
             return True
         else:

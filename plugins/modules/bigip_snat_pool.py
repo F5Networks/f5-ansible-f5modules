@@ -7,32 +7,26 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['stableinterface'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_snat_pool
 short_description: Manage SNAT pools on a BIG-IP
 description:
-  - Manage SNAT pools on a BIG-IP.
+  - Manage SNAT pools on a BIG-IP system.
 version_added: "1.0.0"
 options:
   members:
     description:
-      - List of members to put in the SNAT pool. When a C(state) of present is
-        provided, this parameter is required. Otherwise, it is optional.
-      - The members can be either IP addresses, or names of the SNAT translation objects.
+      - List of members to put in the SNAT pool. When C(state) is C(present),
+        this parameter is required, otherwise it is optional.
+      - The members can be either IP addresses or names of the SNAT translation objects.
     type: list
     elements: str
     aliases:
       - member
   description:
     description:
-      - A general description of the SNAT pool, provided by the user for their
-        benefit. It is optional.
+      - An optional description of the SNAT pool.
     type: str
   name:
     description:
@@ -53,8 +47,8 @@ options:
     type: str
     default: Common
 notes:
-  - When C(bigip_snat_pool) object is removed it also removes any associated C(bigip_snat_translation) objects.
-  - This is a BIG-IP behavior not module behavior and it only occurs when the C(bigip_snat_translation) objects
+  - When the C(bigip_snat_pool) object is removed, it also removes any associated C(bigip_snat_translation) objects.
+  - This is a BIG-IP behavior not module behavior, and it only occurs when the C(bigip_snat_translation) objects
     are also not referenced by another C(bigip_snat_pool).
 extends_documentation_fragment: f5networks.f5_modules.f5
 author:
@@ -123,6 +117,7 @@ members:
 
 import re
 import os
+from datetime import datetime
 
 from ansible.module_utils.basic import (
     AnsibleModule, env_fallback
@@ -136,6 +131,8 @@ from ..module_utils.compare import cmp_str_with_none
 from ..module_utils.ipaddress import (
     is_valid_ip, compress_address
 )
+from ..module_utils.icontrol import tmos_version
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -306,6 +303,8 @@ class ModuleManager(object):
         return False
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         changed = False
         result = dict()
         state = self.want.state
@@ -324,7 +323,7 @@ class ModuleManager(object):
 
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
-
+        send_teem(start, self.module, version)
         return result
 
     def _grab_attr(self, item):

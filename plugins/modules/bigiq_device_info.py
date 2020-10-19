@@ -7,11 +7,6 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['preview'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigiq_device_info
@@ -23,9 +18,9 @@ version_added: "1.0.0"
 options:
   gather_subset:
     description:
-      - When supplied, this argument will restrict the information returned to a given subset.
-      - Can specify a list of values to include a larger subset.
-      - Values can also be used with an initial C(!) to specify that a specific subset
+      - When supplied, this argument restricts the information returned to a given subset.
+      - You can specify a list of values to include a larger subset.
+      - Values can also be used with an initial C(!) to specify a specific subset
         should not be collected.
     type: list
     elements: str
@@ -47,8 +42,8 @@ options:
       - "!vlans"
 extends_documentation_fragment: f5networks.f5_modules.f5
 notes:
-  - This module is supported with all BIGIQ versions
-  - With BIGIQ 7.0 and later, a few metadata fields not included/supported (i.e. uptime, product_changelist, product_jobid)
+  - This module is supported with all BIG-IQ versions
+  - With BIGIQ 7.0 and later, a few metadata fields not included/supported (for example, uptime, product_changelist, product_jobid)
 author:
   - Tim Rupp (@caphrim007)
 '''
@@ -839,6 +834,7 @@ from ..module_utils.common import (
     F5ModuleError, AnsibleF5Parameters, f5_argument_spec, flatten_boolean, transform_name
 )
 from ..module_utils.icontrol import bigiq_version
+from ..module_utils.teem import send_teem
 
 
 def parseStats(entry):
@@ -901,11 +897,14 @@ class BaseManager(object):
         self.kwargs = kwargs
 
     def exec_module(self):
+        start = datetime.datetime.now().isoformat()
+        version = bigiq_version(self.client)
         results = []
         facts = self.read_facts()
         for item in facts:
             attrs = item.to_return()
             results.append(attrs)
+        send_teem(start, self.module, version)
         return results
 
 

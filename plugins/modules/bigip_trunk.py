@@ -7,11 +7,6 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['stableinterface'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_trunk
@@ -37,13 +32,13 @@ options:
     type: str
   link_selection_policy:
     description:
-      - Specifies, once the trunk is configured, the policy that the trunk uses to determine
+      - Once the trunk is configured, specifies the policy the trunk uses to determine
         which member link (interface) can handle new traffic.
-      - When creating a new trunk, if this value is not specific, the default is C(auto).
-      - When C(auto), specifies that the system automatically determines which interfaces
+      - When creating a new trunk, if this value is not specified, the default is C(auto).
+      - When C(auto), specifies the system automatically determines which interfaces
         can handle new traffic. For the C(auto) option, the member links must all be the
         same media type and speed.
-      - When C(maximum-bandwidth), specifies that the system determines which interfaces
+      - When C(maximum-bandwidth), specifies the system determines which interfaces
         can handle new traffic based on the members' maximum bandwidth.
     type: str
     choices:
@@ -51,16 +46,16 @@ options:
       - maximum-bandwidth
   frame_distribution_hash:
     description:
-      - Specifies the basis for the hash that the system uses as the frame distribution
+      - Specifies the basis for the hash the system uses as the frame distribution
         algorithm. The system uses the resulting hash to determine which interface to
         use for forwarding traffic.
       - When creating a new trunk, if this parameter is not specified, the default is
         C(source-destination-ip).
-      - When C(source-destination-mac), specifies that the system bases the hash on the
+      - When C(source-destination-mac), specifies the system bases the hash on the
         combined MAC addresses of the source and the destination.
-      - When C(destination-mac), specifies that the system bases the hash on the MAC
+      - When C(destination-mac), specifies the system bases the hash on the MAC
         address of the destination.
-      - When C(source-destination-ip), specifies that the system bases the hash on the
+      - When C(source-destination-ip), specifies the system bases the hash on the
         combined IP addresses of the source and the destination.
     type: str
     choices:
@@ -69,7 +64,7 @@ options:
       - source-destination-mac
   lacp_enabled:
     description:
-      - When C(yes), specifies that the system supports the link aggregation control
+      - When C(yes), specifies the system supports the link aggregation control
         protocol (LACP), which monitors the trunk by exchanging control packets over
         the member links to determine the health of the links.
       - If LACP detects a failure in a member link, it removes the link from the link
@@ -84,9 +79,9 @@ options:
         if LACP is enabled for the trunk.
       - When creating a new trunk, if this parameter is not specified, the default
         is C(active).
-      - When C(active), specifies that the system periodically sends control packets
+      - When C(active), specifies the system periodically sends control packets
         regardless of whether the partner system has issued a request.
-      - When C(passive), specifies that the system sends control packets only when
+      - When C(passive), specifies the system sends control packets only when
         the partner system has issued a request.
     type: str
     choices:
@@ -97,8 +92,8 @@ options:
       - Specifies the rate at which the system sends the LACP control packets.
       - When creating a new trunk, if this parameter is not specified, the default is
         C(long).
-      - When C(long), specifies that the system sends an LACP control packet every 30 seconds.
-      - When C(short), specifies that the system sends an LACP control packet every 1 seconds.
+      - When C(long), specifies the system sends an LACP control packet every 30 seconds.
+      - When C(short), specifies the system sends an LACP control packet every second.
     type: str
     choices:
       - long
@@ -106,7 +101,7 @@ options:
   qinq_ethertype:
     description:
       - Specifies the ether-type value used for the packets handled on this trunk when
-        it is a member in a QinQ vlan.
+        it is a member in a QinQ VLAN.
       - The ether-type can be set to any string containing a valid hexadecimal 16 bits
         number, or any of the well known ether-types; C(0x8100), C(0x9100), C(0x88a8).
       - This parameter is not supported on Virtual Editions.
@@ -115,7 +110,7 @@ options:
     type: raw
   state:
     description:
-      - When C(present), ensures that the resource exists.
+      - When C(present), ensures the resource exists.
       - When C(absent), ensures the resource is removed.
     type: str
     choices:
@@ -160,13 +155,13 @@ lacp_timeout:
   sample: long
 link_selection_policy:
   description:
-    - LACP policy that the trunk uses to determine which member link (interface)
+    - LACP policy the trunk uses to determine which member link (interface)
       can handle new traffic.
   returned: changed
   type: str
   sample: auto
 frame_distribution_hash:
-  description: Hash that the system uses as the frame distribution algorithm.
+  description: Hash the system uses as the frame distribution algorithm.
   returned: changed
   type: str
   sample: src-dst-ipport
@@ -186,12 +181,12 @@ description:
   type: str
   sample: My trunk
 qinq_ethertype:
-  description: Ether-type value used for the packets handled on this trunk when it is a member in a QinQ vlan.
+  description: Ether-type value used for the packets handled on this trunk when it is a member in a QinQ VLAN.
   returned: changed
   type: str
   sample: 0x9100
 '''
-
+from datetime import datetime
 from ansible.module_utils.basic import AnsibleModule
 
 from ..module_utils.bigip import F5RestClient
@@ -199,6 +194,8 @@ from ..module_utils.common import (
     F5ModuleError, AnsibleF5Parameters, f5_argument_spec
 )
 from ..module_utils.compare import cmp_simple_list
+from ..module_utils.icontrol import tmos_version
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -398,6 +395,8 @@ class ModuleManager(object):
         return False
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         changed = False
         result = dict()
         state = self.want.state
@@ -412,6 +411,7 @@ class ModuleManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, version)
         return result
 
     def _announce_deprecations(self, result):

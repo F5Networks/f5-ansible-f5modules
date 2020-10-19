@@ -7,27 +7,22 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['preview'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigiq_utility_license_assignment
 short_description: Manage utility license assignment on BIG-IPs from a BIG-IQ
 description:
-  - Manages the assignment of utility licenses on a BIG-IQ. Assignment means that
-    the license is assigned to a BIG-IP, or, it needs to be assigned to a BIG-IP.
-    Additionally, this module supported revoking the assignments from BIG-IP devices.
+  - Manages the assignment of utility licenses on a BIG-IQ. Assignment means
+    the license is assigned to a BIG-IP, or it needs to be assigned to a BIG-IP.
+    Additionally, this module supports revoking the assignments from BIG-IP devices.
 version_added: "1.0.0"
 options:
   unit_of_measure:
     description:
       - Sets the rate at which this license usage is billed.
-      - Depending on your license, you may have different unit of measures
+      - Depending on your license, you may have different units of measure
         available to you. If a particular unit is not available to you, the module
-        will notify you at licensing time.
+        notifies you at licensing time.
     type: str
     choices:
       - hourly
@@ -37,7 +32,7 @@ options:
     default: hourly
   key:
     description:
-      - The registration key that you want choose an offering from.
+      - The registration key from which you want choose an offering.
     type: str
     required: True
   offering:
@@ -49,12 +44,12 @@ options:
     description:
       - When C(managed) is C(no), specifies the address, or hostname, where the BIG-IQ
         can reach the remote device to register.
-      - When C(managed) is C(yes), specifies the managed device, or device UUID, that
+      - When C(managed) is C(yes), specifies the managed device, or device UUID,
         you want to register.
-      - If C(managed) is C(yes), it is very important that you do not have more than
+      - If C(managed) is C(yes), it is very important you do not have more than
         one device with the same name. BIG-IQ internally recognizes devices by their ID,
-        and therefore, this module's cannot guarantee that the correct device will be
-        registered. The device returned is the device that will be used.
+        and therefore, this module cannot guarantee the correct device will be
+        registered. The device returned is the device that is used.
     type: str
     required: True
   managed:
@@ -65,7 +60,7 @@ options:
   device_port:
     description:
       - Specifies the port of the remote device to connect to.
-      - If this parameter is not specified, the default of C(443) will be used.
+      - If this parameter is not specified, the default is C(443).
     type: int
     default: 443
   device_username:
@@ -82,7 +77,7 @@ options:
     type: str
   state:
     description:
-      - When C(present), ensures that the device is assigned the specified license.
+      - When C(present), ensures the device is assigned the specified license.
       - When C(absent), ensures the license is revokes from the remote device and freed
         on the BIG-IQ.
     type: str
@@ -143,6 +138,7 @@ RETURN = r'''
 '''
 
 import re
+from datetime import datetime
 
 from ansible.module_utils.basic import AnsibleModule
 
@@ -150,7 +146,9 @@ from ..module_utils.bigip import F5RestClient
 from ..module_utils.common import (
     F5ModuleError, AnsibleF5Parameters, f5_argument_spec
 )
+from ..module_utils.icontrol import bigiq_version
 from ..module_utils.ipaddress import is_valid_ip
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -441,6 +439,8 @@ class ModuleManager(object):
         return False
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = bigiq_version(self.client)
         changed = False
         result = dict()
         state = self.want.state
@@ -455,6 +455,7 @@ class ModuleManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, version)
         return result
 
     def _announce_deprecations(self, result):

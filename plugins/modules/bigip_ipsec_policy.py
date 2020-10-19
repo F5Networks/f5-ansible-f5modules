@@ -7,17 +7,12 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['stableinterface'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_ipsec_policy
 short_description: Manage IPSec policies on a BIG-IP
 description:
-  - Manage IPSec policies on a BIG-IP.
+  - Manage IPSec policies on a BIG-IP device.
 version_added: "1.0.0"
 options:
   name:
@@ -31,7 +26,7 @@ options:
     type: str
   protocol:
     description:
-      - Specifies the IPsec protocol
+      - Specifies the IPsec protocol.
       - Options include ESP (Encapsulating Security Protocol) or AH (Authentication Header).
     type: str
     choices:
@@ -49,7 +44,7 @@ options:
       - When C(isession), specifies the use of iSession over an IPsec tunnel. To use
         this option, you must also configure the iSession endpoints with IPsec in the
         Acceleration section of the user interface.
-      - When C(interface), specifies that the IPsec policy can be used in the tunnel
+      - When C(interface), specifies the IPsec policy can be used in the tunnel
         profile for network interfaces.
     type: str
     choices:
@@ -106,8 +101,8 @@ options:
   ipcomp:
     description:
       - Specifies whether to use IPComp encapsulation.
-      - When C(none), specifies that IPComp is disabled.
-      - When C(deflate), specifies that IPComp is enabled and uses the Deflate
+      - When C(none), specifies IPComp is disabled.
+      - When C(deflate), specifies IPComp is enabled and uses the Deflate
         compression algorithm.
     type: str
     choices:
@@ -116,12 +111,12 @@ options:
       - deflate
   lifetime:
     description:
-      - Specifies the length of time, in minutes, before the IKE security association
-        expires.
+      - Specifies the length of time before the IKE security association expires,
+        in minutes.
     type: int
   kb_lifetime:
     description:
-      - Specifies the length of time, in kilobytes, before the IKE security association
+      - Specifies the length of time before the IKE security association, in kilobytes.
         expires.
     type: int
   perfect_forward_secrecy:
@@ -140,7 +135,7 @@ options:
       - modp8192
   ipv4_interface:
     description:
-      - When C(mode) is C(interface) indicate if the IPv4 C(any) address should be used.
+      - When C(mode) is C(interface), indicates if the IPv4 C(any) address should be used.
         By default C(BIG-IP) assumes C(any6) address for tunnel addresses when C(mode) is C(interface).
       - This option takes effect only when C(mode) is set to C(interface).
     type: bool
@@ -151,7 +146,7 @@ options:
     default: Common
   state:
     description:
-      - When C(present), ensures that the resource exists.
+      - When C(present), ensures the resource exists.
       - When C(absent), ensures the resource is removed.
     type: str
     choices:
@@ -244,6 +239,7 @@ route_domain:
   type: int
   sample: 2
 '''
+from datetime import datetime
 
 from ansible.module_utils.basic import (
     AnsibleModule, env_fallback
@@ -254,6 +250,8 @@ from ..module_utils.common import (
     F5ModuleError, AnsibleF5Parameters, transform_name, f5_argument_spec, flatten_boolean
 )
 from ..module_utils.compare import cmp_str_with_none
+from ..module_utils.icontrol import tmos_version
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -532,6 +530,8 @@ class ModuleManager(object):
         return False
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         changed = False
         result = dict()
         state = self.want.state
@@ -546,6 +546,7 @@ class ModuleManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, version)
         return result
 
     def _announce_deprecations(self, result):

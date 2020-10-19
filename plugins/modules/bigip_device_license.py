@@ -7,11 +7,6 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['preview'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_device_license
@@ -23,13 +18,13 @@ options:
   license_key:
     description:
       - The registration key to use to license the BIG-IP.
-      - This parameter is required if the C(state) is equal to C(present).
+      - This parameter is required if the C(state) is equal to C(present) or C(latest).
       - This parameter is not required when C(state) is C(absent) and will be
         ignored if it is provided.
     type: str
   addon_keys:
     description:
-      - The list of addon keys to use to in conjunction with base license.
+      - The list of addon keys to use to in conjunction with the base license.
       - This parameter will be ignored if no C(license_key) is provided.
       - This parameter is not required when C(state) is C(absent) and will be
         ignored if it is provided.
@@ -39,7 +34,7 @@ options:
   license_server:
     description:
       - The F5 license server to use when getting a license and validating a dossier.
-      - This parameter is required if the C(state) is equal to C(present).
+      - This parameter is required if the C(state) is equal to C(present) or C(latest).
       - This parameter is not required when C(state) is C(absent) and will be
         ignored if it is provided.
     type: str
@@ -47,31 +42,41 @@ options:
   state:
     description:
       - The state of the license on the system.
-      - When C(present), only guarantees that a license is there.
+      - When C(present), only guarantees that a license exists.
       - When C(absent), removes the license on the system.
+      - When C(latest), ensures that the license is always valid. This is not idempotent state since re-run can modify result.
       - When C(revoked), removes the license on the system and revokes its future usage
         on the F5 license servers.
     type: str
     choices:
       - absent
+      - latest
       - present
       - revoked
     default: present
   accept_eula:
     description:
       - Declares whether you accept the BIG-IP EULA or not. By default, this
-        value is C(no). You must specifically declare that you have viewed and
-        accepted the license. This module will not present you with that EULA
-        though, so it is incumbent on you to read it.
+        value is C(no). You must specifically declare you have viewed and
+        accepted the license. This module does not present you with the EULA,
+        so it is incumbent on you to read it.
       - The EULA can be found here; https://support.f5.com/csp/article/K12902.
       - This parameter is not required when C(state) is C(absent) and will be
         ignored if it is provided.
+    type: bool
+    default: no
+  force:
+    description:
+      - Declares whether to force license renewal. By default, this
+        value is C(no).
+      - This parameter is not required and will be ignored if it is provided.
     type: bool
     default: no
 extends_documentation_fragment: f5networks.f5_modules.f5
 author:
   - Tim Rupp (@caphrim007)
   - Wojciech Wypior (@wojtek0806)
+  - Andrey Kashcheev (@andreykashcheev)
 '''
 
 EXAMPLES = '''
@@ -106,20 +111,21 @@ EXAMPLES = '''
 RETURN = r'''
 # only common fields returned
 '''
-
-from ansible.module_utils.basic import AnsibleModule
-from ansible.module_utils.six import iteritems
-
 import re
 import time
 import xml.etree.ElementTree
+from datetime import datetime
 
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.six import iteritems
 
 from ..module_utils.bigip import F5RestClient
 from ..module_utils.common import (
     F5ModuleError, AnsibleF5Parameters, is_empty_list, f5_argument_spec
 )
 from ..module_utils.icontrol import iControlRestSession
+
+from ..module_utils.teem import send_teem
 
 
 class LicenseXmlParser(object):
@@ -397,12 +403,15 @@ class ModuleManager(object):
         return False
 
     def exec_module(self):
+        start = datetime.now().isoformat()
         changed = False
         result = dict()
         state = self.want.state
 
         if state == "present":
             changed = self.present()
+        elif state == "latest":
+            changed = self.valid()
         elif state == "absent":
             changed = self.absent()
         elif state == "revoked":
@@ -413,6 +422,7 @@ class ModuleManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, None)
         return result
 
     def _announce_deprecations(self, result):
@@ -426,6 +436,15 @@ class ModuleManager(object):
     def present(self):
         if self.exists() and not self.is_revoked():
             return False
+        else:
+            return self.create()
+
+    def valid(self):
+        if self.exists() and not self.is_revoked():
+            if self.want.force or not self.license_valid():
+                return self.create()
+            else:
+                return False
         else:
             return self.create()
 
@@ -595,6 +614,29 @@ class ModuleManager(object):
                     "Failed to remove the license from the device."
                 )
             return True
+        return False
+
+    def license_valid(self):
+        errors = [401, 403, 409, 500, 501, 502, 503, 504]
+        uri = "https://{0}:{1}/mgmt/tm/shared/licensing/registration".format(
+            self.client.provider['server'],
+            self.client.provider['server_port'],
+        )
+        resp = self.client.api.get(uri)
+        try:
+            response = resp.json()
+        except ValueError as ex:
+            raise F5ModuleError(str(ex))
+
+        if resp.status in errors or 'code' in response and response['code'] in errors:
+            if 'message' in response:
+                raise F5ModuleError(response['message'])
+            else:
+                raise F5ModuleError(resp.content)
+        try:
+            return int(float(response['expiresInDays'])) > 0
+        except Exception:
+            pass
         return False
 
     def exists(self):
@@ -857,10 +899,14 @@ class ArgumentSpec(object):
                 default='activate.f5.com'
             ),
             state=dict(
-                choices=['absent', 'present', 'revoked'],
+                choices=['absent', 'present', 'revoked', 'latest'],
                 default='present'
             ),
             accept_eula=dict(
+                type='bool',
+                default='no'
+            ),
+            force=dict(
                 type='bool',
                 default='no'
             )
@@ -869,7 +915,8 @@ class ArgumentSpec(object):
         self.argument_spec.update(f5_argument_spec)
         self.argument_spec.update(argument_spec)
         self.required_if = [
-            ['state', 'present', ['accept_eula', 'license_key']]
+            ['state', 'present', ['accept_eula', 'license_key']],
+            ['state', 'latest', ['accept_eula', 'license_key']]
         ]
 
 

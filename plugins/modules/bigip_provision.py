@@ -7,11 +7,6 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['stableinterface'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_provision
@@ -52,9 +47,9 @@ options:
       - Sets the provisioning level for the requested modules. Changing the
         level for one module may require modifying the level of another module.
         For example, changing one module to C(dedicated) requires setting all
-        others to C(none). Setting the level of a module to C(none) means that
+        others to C(none). Setting the level of a module to C(none) means
         the module is not activated.
-      - Use C(state) absent to set c(level) to none and de-provision module.
+      - Use a C(state) of B(absent) to set c(level) to none and de-provision the module.
       - This parameter is not relevant to C(cgnat - pre tmos 15.0) or C(mgmt) and will not be
         applied to the C(cgnat - pre tmos 15.0) or C(mgmt) module.
     type: str
@@ -65,26 +60,26 @@ options:
     default: nominal
   memory:
     description:
-      - Sets additional memory for management module. This is in addition to
+      - Sets additional memory for the management module. This is in addition to
         minimum allocated RAM of 1264MB.
       - The accepted value range is C(0 - 8192). Maximum value is restricted by
-        systems available RAM.
-      - Specifying C(large) reserves an additional 500MB for mgmt module.
-      - Specifying C(medium) reserves an additional 200MB for mgmt module.
-      - Specifying C(small) reserves no additional RAM for mgmt module.
+        the available RAM in the system.
+      - Specifying C(large) reserves an additional 500MB for the mgmt module.
+      - Specifying C(medium) reserves an additional 200MB for the mgmt module.
+      - Specifying C(small) reserves no additional RAM for the mgmt module.
       - Use C(large) for configurations containing more than 2000 objects, or
         more specifically, for any configuration that exceeds 1000 objects
         per 2 GB of installed memory. Changing the Management C(mgmt) size
-        after initial provisioning causes a reprovision operation
+        after initial provisioning causes a reprovision operation.
     type: str
   state:
     description:
       - The state of the provisioned module on the system. When C(present),
-        guarantees that the specified module is provisioned at the requested
-        level provided that there are sufficient resources on the device (such
-        as physical RAM) to support the provisioned module.
+        guarantees the specified module is provisioned at the requested
+        level, provided there are sufficient resources on the device (such
+        as physical RAM) to support the module.
       - When C(absent), de-provision the module.
-      - C(absent), is not a relevent option to C(mgmt) module as module can not be de-provisioned.
+      - C(absent), is not a relevent option for the C(mgmt) module, as it can not be de-provisioned.
     type: str
     choices:
       - present
@@ -142,9 +137,10 @@ memory:
 '''
 
 import time
+from datetime import datetime
+from distutils.version import LooseVersion
 
 from ansible.module_utils.basic import AnsibleModule
-from distutils.version import LooseVersion
 
 from ..module_utils.bigip import F5RestClient
 from ..module_utils.common import (
@@ -153,6 +149,7 @@ from ..module_utils.common import (
 from ..module_utils.icontrol import (
     TransactionContextManager, tmos_version
 )
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -303,6 +300,8 @@ class ModuleManager(object):
         return False
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         changed = False
         result = dict()
         state = self.want.state
@@ -315,6 +314,7 @@ class ModuleManager(object):
         changes = reportable.to_return()
         result.update(**changes)
         result.update(dict(changed=changed))
+        send_teem(start, self.module, version)
         return result
 
     def version_is_greater_or_equal_15(self):

@@ -8,11 +8,6 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['preview'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_pool_member
@@ -24,7 +19,7 @@ options:
   name:
     description:
       - Name of the node to create, or re-use, when creating a new pool member.
-      - This parameter is optional and, if not specified, a node name will be
+      - This parameter is optional. If not specified, a node name will be
         created automatically from either the specified C(address) or C(fqdn).
       - The C(enabled) state is an alias of C(present).
     type: str
@@ -63,8 +58,8 @@ options:
       - FQDN name of the pool member. This can be any name that is a valid RFC 1123 DNS
         name. Therefore, the only characters that can be used are "A" to "Z",
         "a" to "z", "0" to "9", the hyphen ("-") and the period (".").
-      - FQDN names must include at lease one period; delineating the host from
-        the domain. ex. C(host.domain).
+      - FQDN names must include at least one period; delineating the host from
+        the domain. For example, C(host.domain).
       - FQDN names must end with a letter or a number.
       - When creating a new pool member, one of either C(address) or C(fqdn) must be
         provided. This parameter cannot be updated after it is set.
@@ -78,7 +73,7 @@ options:
     type: int
   connection_limit:
     description:
-      - Pool member connection limit. Setting this to 0 disables the limit.
+      - Pool member connection limit. Setting this to C(0) disables the limit.
     type: int
   description:
     description:
@@ -86,7 +81,7 @@ options:
     type: str
   rate_limit:
     description:
-      - Pool member rate limit (connections-per-second). Setting this to 0
+      - Pool member rate limit (connections-per-second). Setting this to C(0)
         disables the limit.
     type: int
   ratio:
@@ -97,7 +92,7 @@ options:
     type: int
   preserve_node:
     description:
-      - When state is C(absent) attempts to remove the node that the pool
+      - When state is C(absent), the system attempts to remove the node the pool
         member references.
       - The node will not be removed if it is still referenced by other pool
         members. If this happens, the module will not raise an error.
@@ -106,12 +101,12 @@ options:
   priority_group:
     description:
       - Specifies a number representing the priority group for the pool member.
-      - When adding a new member, the default is 0, meaning that the member has no priority.
+      - When adding a new member, the default is C(0), meaning the member has no priority.
       - To specify a priority, you must activate priority group usage when you
         create a new pool or when adding or removing pool members. When activated,
         the system load balances traffic according to the priority group number
         assigned to the pool member.
-      - The higher the number, the higher the priority, so a member with a priority
+      - The higher the number, the higher the priority. So a member with a priority
         of 3 has higher priority than a member with a priority of 1.
     type: int
   fqdn_auto_populate:
@@ -136,24 +131,24 @@ options:
     default: yes
   monitors:
     description:
-      - Specifies the health monitors that the system currently uses to monitor
+      - Specifies the health monitors the system currently uses to monitor
         this resource.
     type: list
     elements: str
   availability_requirements:
     description:
-      - Specifies, if you activate more than one health monitor, the number of health
+      - If you activate more than one health monitor, specifies the number of health
         monitors that must receive successful responses in order for the link to be
         considered available.
-      - Specifying an empty string will remove the monitors and revert to inheriting from pool (default).
-      - Specifying C(none) value will remove any health monitoring from the member completely.
+      - Specifying an empty string will remove the monitors and revert to inheriting from the pool (default).
+      - Specifying C(none) will remove any health monitoring from the member completely.
     type: dict
     suboptions:
       type:
         description:
           - Monitor rule type when C(monitors) is specified.
           - When creating a new pool, if this value is not specified, the default of
-            'all' will be used.
+            C(all) will be used.
         type: str
         required: True
         choices:
@@ -172,32 +167,32 @@ options:
         RFC 2003) or GRE (Generic Router Encapsulation, RFC 2784) on outbound packets
         (from BIG-IP system to server-pool member).
       - When C(none), disables IP encapsulation.
-      - When C(inherit), inherits IP encapsulation setting from the member's pool.
-      - When any other value, Options are None, Inherit from Pool, and Member Specific.
+      - When C(inherit), inherits the IP encapsulation setting from the member's pool.
+      - When any other value, the options are None, Inherit from Pool, and Member Specific.
     type: str
   aggregate:
     description:
-      - List of pool member definitions to be created, modified or removed.
-      - When using C(aggregates) if one of the aggregate definitions is invalid, the aggregate run will fail,
+      - List of pool member definitions to be created, modified, or removed.
+      - When using C(aggregates), if one of the aggregate definitions is invalid, the aggregate run will fail,
         indicating the error it last encountered.
-      - The module will C(NOT) rollback any changes it has made prior to encountering the error.
-      - The module also will not indicate what changes were made prior to failure, therefore it is strongly advised
-        to run the module in check mode to make basic validation, prior to module execution.
+      - The module will B(NOT) rollback any changes it has made prior to encountering the error.
+      - The module also will not indicate what changes were made prior to failure. Therefore we strong advise
+        you run the module in C(check) mode to ensure basic validation prior to executing this module.
     type: list
     elements: dict
     aliases:
       - members
   replace_all_with:
     description:
-      - Remove members not defined in the C(aggregate) parameter.
-      - This operation is all or none, meaning that it will stop if there are some pool members
+      - Removes members not defined in the C(aggregate) parameter.
+      - This operation is all or none, meaning it will stop if there are some pool members
         that cannot be removed.
     type: bool
     default: no
     aliases:
       - purge
 notes:
-  - In previous versions of this module, which used the SDK, the C(name) parameter would act as C(fqdn) if C(address) or
+  - In previous versions of this module which used the SDK, the C(name) parameter would act as C(fqdn) if C(address) or
     C(fqdn) were not provided.
 extends_documentation_fragment: f5networks.f5_modules.f5
 author:
@@ -205,7 +200,7 @@ author:
   - Wojciech Wypior (@wojtek0806)
 '''
 
-EXAMPLES = '''
+EXAMPLES = r'''
 - name: Add pool member
   bigip_pool_member:
     pool: my-pool
@@ -353,14 +348,14 @@ EXAMPLES = '''
   delegate_to: localhost
 '''
 
-RETURN = '''
+RETURN = r'''
 rate_limit:
   description: The new rate limit, in connections per second, of the pool member.
   returned: changed
   type: int
   sample: 100
 connection_limit:
-  description: The new connection limit of the pool member
+  description: The new connection limit of the pool member.
   returned: changed
   type: int
   sample: 1000
@@ -400,7 +395,7 @@ monitors:
   type: list
   sample: ['/Common/monitor1', '/Common/monitor2']
 replace_all_with:
-  description: Purges all non-aggregate pool members from device
+  description: Purges all non-aggregate pool members from device.
   returned: changed
   type: bool
   sample: yes
@@ -408,8 +403,8 @@ replace_all_with:
 
 import os
 import re
-
 from copy import deepcopy
+from datetime import datetime
 
 from ansible.module_utils.urls import urlparse
 from ansible.module_utils.basic import (
@@ -417,10 +412,7 @@ from ansible.module_utils.basic import (
 )
 from ansible.module_utils.six import iteritems
 
-try:
-    from ansible_collections.ansible.netcommon.plugins.module_utils.network.common.utils import remove_default_spec
-except ImportError:
-    from ansible.module_utils.network.common.utils import remove_default_spec
+from ansible_collections.ansible.netcommon.plugins.module_utils.network.common.utils import remove_default_spec
 
 from ..module_utils.bigip import F5RestClient
 from ..module_utils.common import (
@@ -428,7 +420,11 @@ from ..module_utils.common import (
 )
 from ..module_utils.ipaddress import is_valid_ip, validate_ip_v6_address
 from ..module_utils.compare import cmp_str_with_none
-from ..module_utils.icontrol import TransactionContextManager
+from ..module_utils.icontrol import (
+    TransactionContextManager, tmos_version
+)
+from ..module_utils.icontrol import tmos_version
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -1038,6 +1034,8 @@ class ModuleManager(object):
             )
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         wants = None
         if self.module.params['replace_all_with']:
             self.replace_all_with = True
@@ -1066,6 +1064,7 @@ class ModuleManager(object):
             result.update(output)
         if changed:
             result['changed'] = True
+        send_teem(start, self.module, version)
         return result
 
     def merge_defaults_for_aggregate(self, params):

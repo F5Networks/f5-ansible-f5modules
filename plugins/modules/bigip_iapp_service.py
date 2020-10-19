@@ -7,24 +7,18 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['stableinterface'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_iapp_service
 short_description: Manages TCL iApp services on a BIG-IP
 description:
   - Manages TCL iApp services on a BIG-IP.
-  - If you are looking for the API that is communicated with on the BIG-IP,
-    the one the is used is C(/mgmt/tm/sys/application/service/).
+  - The API that the system uses to communicate with on the BIG-IP is C(/mgmt/tm/sys/application/service/).
 version_added: "1.0.0"
 options:
   name:
     description:
-      - The name of the iApp service that you want to deploy.
+      - The name of the iApp service you want to deploy.
     type: str
     required: True
   template:
@@ -38,14 +32,14 @@ options:
     description:
       - A hash of all the required template variables for the iApp template.
         If your parameters are stored in a file (the more common scenario)
-        it is recommended you use either the C(file) or C(template) lookups
+        we recommend you use either the C(file) or C(template) lookups
         to supply the expected parameters.
       - These parameters typically consist of the C(lists), C(tables), and
         C(variables) fields.
     type: dict
   force:
     description:
-      - Forces the updating of an iApp service even if the parameters to the
+      - Forces the updating of an iApp service, even if the parameters to the
         service have not changed. This option is of particular importance if
         the iApp template that underlies the service has been updated in-place.
         This option is equivalent to re-configuring the iApp if that template
@@ -54,8 +48,8 @@ options:
     default: no
   state:
     description:
-      - When C(present), ensures that the iApp service is created and running.
-        When C(absent), ensures that the iApp service has been removed.
+      - When C(present), ensures the iApp service is created and running.
+        When C(absent), ensures the iApp service has been removed.
     type: str
     choices:
       - present
@@ -258,7 +252,7 @@ EXAMPLES = r'''
 RETURN = r'''
 # only common fields returned
 '''
-
+from datetime import datetime
 
 from ansible.module_utils.basic import (
     AnsibleModule, env_fallback
@@ -269,7 +263,9 @@ from ..module_utils.bigip import F5RestClient
 from ..module_utils.common import (
     F5ModuleError, AnsibleF5Parameters, transform_name, f5_argument_spec, flatten_boolean, fq_name
 )
+from ..module_utils.icontrol import tmos_version
 from ..module_utils.urls import build_service_uri
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -697,6 +693,8 @@ class ModuleManager(object):
         return False
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         changed = False
         result = dict()
         state = self.want.state
@@ -709,6 +707,7 @@ class ModuleManager(object):
         changes = self.changes.to_return()
         result.update(**changes)
         result.update(dict(changed=changed))
+        send_teem(start, self.module, version)
         return result
 
     def present(self):

@@ -7,11 +7,6 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['stableinterface'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_data_group
@@ -34,7 +29,7 @@ options:
     description:
       - The type of records in this data group.
       - This parameter is especially important because it causes BIG-IP to store your data
-        in different ways so-as to optimize access to it. For example, it would be wrong
+        in different ways to optimize access to it. For example, it would be wrong
         to specify a list of records containing IP addresses, but label them as a C(string)
         type.
       - This value cannot be changed once the data group is created.
@@ -52,11 +47,11 @@ options:
     description:
       - The type of this data group.
       - You should only consider setting this value in cases where you know exactly what
-        you're doing, B(or), you are working with a pre-existing internal data group.
+        you are doing, B(or), you are working with a pre-existing internal data group.
       - Be aware that if you deliberately force this parameter to C(yes), and you have a
         either a large number of records or a large total records size, this large amount
         of data will be reflected in your BIG-IP configuration. This can lead to B(long)
-        system configuration load times due to needing to parse and verify the large
+        system configuration load times due to parsing and verifying the large
         configuration.
       - There is a limit of either 4 megabytes or 65,000 records (whichever is more restrictive)
         for uploads when this parameter is C(yes).
@@ -65,7 +60,7 @@ options:
     default: no
   external_file_name:
     description:
-      - When creating a new data group, this specifies the file name that you want to give an
+      - When creating a new data group, this specifies the file name you want to give an
         external data group file on the BIG-IP.
       - This parameter is ignored when C(internal) is C(yes).
       - This parameter can be used to select an existing data group file to use with an
@@ -76,16 +71,16 @@ options:
     type: str
   records:
     description:
-      - Specifies the records that you want to add to a data group.
-      - If you have a large number of records, it is recommended that you use C(records_src)
+      - Specifies the records you want to add to a data group.
+      - If you have a large number of records, we recommend you use C(records_src)
         instead of typing all those records here.
       - The technical limit of either 1. the number of records, or 2. the total size of all
         records, varies with the size of the total resources on your system; in particular,
         RAM.
       - When C(internal) is C(no), at least one record must be specified in either C(records)
         or C(records_src).
-      - "When C(type) is: C(ip), C(address), C(addr) if the addresses use non default route domain,
-        they must be explicit about it that is they must contain a route domain notation C(%) eg. 10.10.1.1%11.
+      - "When C(type) is: C(ip), C(address), C(addr) if the addresses use a non-default route domain,
+        they must be explicit about it, meaning they must contain a route domain notation C(%) e.g. 10.10.1.1%11.
         This is true regardless if the data group resides in a partition or not."
     type: list
     elements: raw
@@ -93,7 +88,7 @@ options:
       key:
         description:
           - The key describing the record in the data group.
-          - Your key will be used for validation of the C(type) parameter to this module.
+          - The key will be used for validation of the C(type) parameter to this module.
         type: str
         required: True
       value:
@@ -111,7 +106,7 @@ options:
       - Record keys are limited in length to no more than 65520 characters.
       - Values of record keys are limited in length to no more than 65520 characters.
       - The total number of records you can have in your BIG-IP is limited by the memory
-        of the BIG-IP.
+        of the BIG-IP itself.
       - The format of this content is slightly different depending on whether you specify
         a C(type) of C(address), C(integer), or C(string). See the examples section for
         examples of the different types of payload formats that are expected in your data
@@ -123,7 +118,7 @@ options:
     description:
       - When specifying C(records_src), this is the string of characters that will
         be used to break apart entries in the C(records_src) into key/value pairs.
-      - By default, this parameter's value is C(:=).
+      - By default, the value of this parameter is C(:=).
       - This value cannot be changed once it is set.
       - This parameter is only relevant when C(internal) is C(no). It will be ignored
         otherwise.
@@ -131,7 +126,7 @@ options:
     default: ":="
   delete_data_group_file:
     description:
-      - When C(yes), will ensure that the remote data group file is deleted.
+      - When C(yes), will ensure the remote data group file is deleted.
       - This parameter is only relevant when C(state) is C(absent) and C(internal) is C(no).
     type: bool
     default: no
@@ -143,7 +138,7 @@ options:
   state:
     description:
       - When C(state) is C(present), ensures the data group exists.
-      - When C(state) is C(absent), ensures that the data group is removed.
+      - When C(state) is C(absent), ensures the data group is removed.
       - The use of state in this module refers to the entire data group, not its members.
     type: str
     choices:
@@ -278,20 +273,16 @@ RETURN = r'''
 import hashlib
 import os
 import re
+from datetime import datetime
 
 from ansible.module_utils._text import to_text
 from ansible.module_utils.basic import (
     AnsibleModule, env_fallback
 )
 
-try:
-    from ansible_collections.ansible.netcommon.plugins.module_utils.compat.ipaddress import (
-        ip_network, ip_interface
-    )
-except ImportError:
-    from ansible.module_utils.compat.ipaddress import (
-        ip_network, ip_interface
-    )
+from ansible_collections.ansible.netcommon.plugins.module_utils.compat.ipaddress import (
+    ip_network, ip_interface
+)
 
 try:
     from StringIO import StringIO
@@ -305,9 +296,11 @@ from ..module_utils.common import (
 from ..module_utils.compare import (
     cmp_str_with_none, compare_complex_list
 )
-from ..module_utils.icontrol import upload_file
+from ..module_utils.icontrol import (
+    upload_file, tmos_version
+)
 from ..module_utils.ipaddress import is_valid_ip_interface
-
+from ..module_utils.teem import send_teem
 
 LINE_LIMIT = 65000
 SIZE_LIMIT_BYTES = 4000000
@@ -912,6 +905,8 @@ class BaseManager(object):
         return False
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         changed = False
         result = dict()
         state = self.want.state
@@ -926,6 +921,7 @@ class BaseManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, version)
         return result
 
     def _announce_deprecations(self, result):
