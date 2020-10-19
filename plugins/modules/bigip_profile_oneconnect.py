@@ -7,17 +7,12 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['stableinterface'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_profile_oneconnect
 short_description: Manage OneConnect profiles on a BIG-IP
 description:
-  - Manage OneConnect profiles on a BIG-IP.
+  - Manage OneConnect profiles on a BIG-IP system.
 version_added: "1.0.0"
 options:
   name:
@@ -33,7 +28,7 @@ options:
     type: str
   source_mask:
     description:
-      - Specifies a value that the system applies to the source address to determine
+      - Specifies a value the system applies to the source address to determine
         its eligibility for reuse.
       - When creating a new profile, if this parameter is not specified, the
         default is provided by the parent profile.
@@ -51,9 +46,9 @@ options:
     type: str
   maximum_size:
     description:
-      - Specifies the maximum number of connections that the system holds in the
+      - Specifies the maximum number of connections the system holds in the
         connection reuse pool.
-      - If the pool is already full, then a server-side connection closes after the
+      - If the pool is already full, a server-side connection closes after the
         response is completed.
       - When creating a new profile, if this parameter is not specified, the
         default is provided by the parent profile.
@@ -75,13 +70,13 @@ options:
     type: int
   idle_timeout_override:
     description:
-      - Specifies the number of seconds that a connection is idle before the connection
+      - Specifies the number of seconds a connection is idle before the connection
         flow is eligible for deletion.
       - When creating a new profile, if this parameter is not specified, the default
         is provided by the parent profile.
       - You may specify a number of seconds for the timeout override.
-      - When C(disabled), specifies that there is no timeout override for the connection.
-      - When C(indefinite), Specifies that a connection may be idle with no timeout
+      - When C(disabled), specifies there is no timeout override for the connection.
+      - When C(indefinite), specifies a connection may be idle with no timeout
         override.
     type: str
   limit_type:
@@ -106,8 +101,8 @@ options:
       - strict
   share_pools:
     description:
-      - Indicates that connections may be shared not only within a virtual server, but
-        also among similar virtual servers
+      - Indicates connections may be shared not only within a virtual server, but
+        also among similar virtual servers.
       - When C(yes), all virtual servers that use the same OneConnect and other internal
         network profiles can share connections.
       - When creating a new profile, if this parameter is not specified, the default
@@ -120,7 +115,7 @@ options:
     default: Common
   state:
     description:
-      - When C(present), ensures that the profile exists.
+      - When C(present), ensures the profile exists.
       - When C(absent), ensures the profile is removed.
     type: str
     choices:
@@ -146,7 +141,7 @@ EXAMPLES = r'''
 
 RETURN = r'''
 source_mask:
-  description: Value that the system applies to the source address to determine its eligibility for reuse.
+  description: Value the system applies to the source address to determine its eligibility for reuse.
   returned: changed
   type: str
   sample: 255.255.255.255
@@ -156,7 +151,7 @@ description:
   type: str
   sample: My profile
 maximum_size:
-  description: Maximum number of connections that the system holds in the connection reuse pool.
+  description: Maximum number of connections the system holds in the connection reuse pool.
   returned: changed
   type: int
   sample: 3000
@@ -166,7 +161,7 @@ maximum_age:
   type: int
   sample: 2000
 maximum_reuse:
-  description: Maximum number of times that a server-side connection can be reused.
+  description: Maximum number of times a server-side connection can be reused.
   returned: changed
   type: int
   sample: 1000
@@ -186,6 +181,7 @@ share_pools:
   type: bool
   sample: yes
 '''
+from datetime import datetime
 
 from ansible.module_utils.basic import (
     AnsibleModule, env_fallback
@@ -196,6 +192,8 @@ from ..module_utils.common import (
     F5ModuleError, AnsibleF5Parameters, transform_name, f5_argument_spec, fq_name
 )
 from ..module_utils.ipaddress import is_valid_ip
+from ..module_utils.icontrol import tmos_version
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -406,6 +404,8 @@ class ModuleManager(object):
         return False
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         changed = False
         result = dict()
         state = self.want.state
@@ -420,6 +420,7 @@ class ModuleManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, version)
         return result
 
     def _announce_deprecations(self, result):

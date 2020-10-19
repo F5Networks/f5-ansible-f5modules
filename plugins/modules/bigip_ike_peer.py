@@ -7,17 +7,12 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['stableinterface'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_ike_peer
 short_description: Manage IPSec IKE Peer configuration on BIG-IP
 description:
-  - Manage IPSec IKE Peer configuration on BIG-IP.
+  - Manage IPSec IKE Peer configuration on a BIG-IP device.
 version_added: "1.0.0"
 options:
   name:
@@ -46,7 +41,7 @@ options:
       - v2
   presented_id_type:
     description:
-      - Specifies the identifier type that the local system uses to identify
+      - Specifies the identifier type the local system uses to identify
         itself to the peer during IKE Phase 1 negotiations.
     type: str
     choices:
@@ -58,9 +53,9 @@ options:
       - override
   presented_id_value:
     description:
-      - This is a required value when C(version) includes (Cv2).
       - Specifies a value for the identity when using a C(presented_id_type) of
         C(override).
+      - This is a required value when C(version) includes (Cv2).
     type: str
   verified_id_type:
     description:
@@ -79,9 +74,9 @@ options:
       - override
   verified_id_value:
     description:
-      - This is a required value when C(version) includes (Cv2).
       - Specifies a value for the identity when using a C(verified_id_type) of
         C(override).
+      - This is a required value when C(version) includes (Cv2).
     type: str
   phase1_auth_method:
     description:
@@ -94,7 +89,7 @@ options:
       - rsa-signature
   phase1_lifetime:
     description:
-      - Defines the lifetime in minutes of an IKE SA which will be proposed in the phase 1 negotiations..
+      - Defines the lifetime in minutes of an IKE SA which will be proposed in the phase 1 negotiations.
       - The accepted value range is C(1 - 4294967295) minutes.
       - When creating a new IKE peer, if this value is not specified, the default value set by the system is
         C(1440) minutes.
@@ -109,7 +104,7 @@ options:
     type: str
   phase1_key:
     description:
-      - Specifies the public key that the digital certificate contains.
+      - Specifies the public key the digital certificate contains.
       - When creating a new IKE peer, if this value is not specified, and
         C(phase1_auth_method) is C(rsa-signature), the default is C(default.key).
       - This parameter is invalid when C(phase1_auth_method) is C(pre-shared-key).
@@ -129,7 +124,7 @@ options:
     type: bool
   preshared_key:
     description:
-      - Specifies a string that the IKE peers share for authenticating each other.
+      - Specifies a string the IKE peers share for authenticating each other.
       - This parameter is only relevant when C(phase1_auth_method) is C(pre-shared-key).
       - This parameter is invalid when C(phase1_auth_method) is C(rsa-signature).
     type: str
@@ -180,7 +175,7 @@ options:
       - modp8192
   update_password:
     description:
-      - C(always) will allow to update passwords if the user chooses to do so.
+      - C(always) will allow updating passwords if the user chooses to do so.
         C(on_create) will only set the password for newly created IKE peers.
     type: str
     choices:
@@ -194,7 +189,7 @@ options:
     default: Common
   state:
     description:
-      - When C(present), ensures that the resource exists.
+      - When C(present), ensures the resource exists.
       - When C(absent), ensures the resource is removed.
     type: str
     choices:
@@ -309,6 +304,7 @@ presented_id_value:
   type: str
   sample: 1.2.3.1
 '''
+from datetime import datetime
 
 from ansible.module_utils.basic import (
     AnsibleModule, env_fallback
@@ -319,6 +315,8 @@ from ..module_utils.common import (
     F5ModuleError, AnsibleF5Parameters, transform_name, f5_argument_spec, flatten_boolean, fq_name
 )
 from ..module_utils.compare import cmp_str_with_none
+from ..module_utils.icontrol import tmos_version
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -546,6 +544,8 @@ class ModuleManager(object):
         return False
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         changed = False
         result = dict()
         state = self.want.state
@@ -560,6 +560,7 @@ class ModuleManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, version)
         return result
 
     def _announce_deprecations(self, result):

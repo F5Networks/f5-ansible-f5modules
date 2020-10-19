@@ -7,58 +7,52 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['stableinterface'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_qkview
-short_description: Manage qkviews on the device
+short_description: Manage QKviews on the device
 description:
-  - Manages creating and downloading qkviews from a BIG-IP. Various
-    options can be provided when creating qkviews. The qkview is important
-    when dealing with F5 support. It may be required that you upload this
-    qkview to the supported channels during resolution of an SRs that you
-    may have opened.
+  - Manages creating and downloading QKviews from a BIG-IP. The qkview utility automatically
+    collects configuration and diagnostic information from BIG-IP systems, and combines
+    the data into a QKView file. F5 Support may request you send or upload this
+    QKview to assist in troubleshooting.
 version_added: "1.0.0"
 options:
   filename:
     description:
-      - Name of the qkview to create on the remote BIG-IP.
+      - Name of the QKview file to create on the remote BIG-IP.
     type: str
     default: "localhost.localdomain.qkview"
   dest:
     description:
-      - Destination on your local filesystem when you want to save the qkview.
+      - Destination on your local filesystem where you want to save the QKview.
     type: path
     required: True
   asm_request_log:
     description:
-      - When C(True), includes the ASM request log data. When C(False),
-        excludes the ASM request log data.
+      - When C(true), includes ASM request log data. When C(False),
+        excludes ASM request log data.
     type: bool
     default: no
   max_file_size:
     description:
-      - Max file size, in bytes, of the qkview to create. By default, no max
+      - Maximum file size of the QKview file, in bytes. By default, no max
         file size is specified.
     type: int
     default: 0
   complete_information:
     description:
-      - Include complete information in the qkview.
+      - Include complete (all applicable) information in the QKview.
     type: bool
     default: no
   exclude_core:
     description:
-      - Exclude core files from the qkview.
+      - Exclude core files from the QKview.
     type: bool
     default: no
   exclude:
     description:
-      - Exclude various file from the qkview.
+      - Exclude various file from the QKview.
     type: list
     elements: str
     choices:
@@ -76,7 +70,7 @@ notes:
   - This module does not include the "max time" or "restrict to blade" options.
   - If you are using this module with either Ansible Tower or Ansible AWX, you
     should be aware of how these Ansible products execute jobs in restricted
-    environments. More informat can be found here
+    environments. More information can be found here
     https://clouddocs.f5.com/products/orchestration/ansible/devel/usage/module-usage-with-tower.html
 extends_documentation_fragment: f5networks.f5_modules.f5
 author:
@@ -108,8 +102,10 @@ import socket
 import ssl
 import time
 
-from ansible.module_utils.basic import AnsibleModule
+from datetime import datetime
 from distutils.version import LooseVersion
+
+from ansible.module_utils.basic import AnsibleModule
 
 try:
     import urlparse
@@ -120,7 +116,10 @@ from ..module_utils.bigip import F5RestClient
 from ..module_utils.common import (
     F5ModuleError, AnsibleF5Parameters, transform_name, f5_argument_spec
 )
-from ..module_utils.icontrol import download_file
+from ..module_utils.icontrol import (
+    download_file, tmos_version
+)
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -227,16 +226,7 @@ class ModuleManager(object):
             return BulkLocationManager(**self.kwargs)
 
     def is_version_less_than_14(self):
-        uri = "https://{0}:{1}/mgmt/tm/sys".format(
-            self.client.provider['server'],
-            self.client.provider['server_port'],
-        )
-        resp = self.client.api.get(uri)
-        try:
-            response = resp.json()
-        except ValueError as ex:
-            raise F5ModuleError(str(ex))
-        version = urlparse.parse_qs(urlparse.urlparse(response['selfLink']).query)['ver'][0]
+        version = tmos_version(self.client)
         if LooseVersion(version) < LooseVersion('14.0.0'):
             return True
         else:
@@ -260,12 +250,15 @@ class BaseManager(object):
             self.changes = Parameters(params=changed)
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         result = dict()
 
         self.present()
 
         result.update(**self.changes.to_return())
         result.update(dict(changed=False))
+        send_teem(start, self.module, version)
         return result
 
     def present(self):

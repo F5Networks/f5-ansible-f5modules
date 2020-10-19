@@ -7,11 +7,6 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['preview'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_monitor_snmp_dca
@@ -40,7 +35,7 @@ options:
     default: "/Common/snmp_dca"
   interval:
     description:
-      - Specifies, in seconds, the frequency at which the system issues the
+      - Specifies the frequency, in seconds, at which the system issues the
         monitor check when either the resource is down or the status of the
         resource is unknown. When creating a new monitor, the default is C(10).
     type: int
@@ -66,14 +61,14 @@ options:
     type: int
   community:
     description:
-      - Specifies the community name that the system must use to authenticate
+      - Specifies the community name the system must use to authenticate
         with the host server through SNMP. When creating a new monitor, the
-        default value is C(public). Note that this value is case sensitive.
+        default value is C(public). This value is case sensitive.
     type: str
   version:
     description:
-      - Specifies the version of SNMP that the host server uses. When creating
-        a new monitor, the default is C(v1). When C(v1), specifies that the
+      - Specifies the version of SNMP the host server uses. When creating
+        a new monitor, the default is C(v1). When C(v1), specifies the
         host server uses SNMP version 1. When C(v2c), specifies that the host
         server uses SNMP version 2c.
     type: str
@@ -91,7 +86,7 @@ options:
       - GENERIC
   cpu_coefficient:
     description:
-      - Specifies the coefficient that the system uses to calculate the weight
+      - Specifies the coefficient the system uses to calculate the weight
         of the CPU threshold in the dynamic ratio load balancing algorithm.
         When creating a new monitor, the default is C(1.5).
     type: str
@@ -102,7 +97,7 @@ options:
     type: int
   memory_coefficient:
     description:
-      - Specifies the coefficient that the system uses to calculate the weight
+      - Specifies the coefficient the system uses to calculate the weight
         of the memory threshold in the dynamic ratio load balancing algorithm.
         When creating a new monitor, the default is C(1.0).
     type: str
@@ -113,7 +108,7 @@ options:
     type: int
   disk_coefficient:
     description:
-      - Specifies the coefficient that the system uses to calculate the weight
+      - Specifies the coefficient the system uses to calculate the weight
         of the disk threshold in the dynamic ratio load balancing algorithm.
         When creating a new monitor, the default is C(2.0).
     type: str
@@ -129,7 +124,7 @@ options:
     default: Common
   state:
     description:
-      - When C(present), ensures that the monitor exists.
+      - When C(present), ensures the monitor exists.
       - When C(absent), ensures the monitor is removed.
     type: str
     choices:
@@ -138,7 +133,7 @@ options:
     default: present
 notes:
   - Requires BIG-IP software version >= 12
-  - This module does not support the C(variables) option because this option
+  - This module does not support the C(variables) option because it
     is broken in the REST API and does not function correctly in C(tmsh); for
     example you cannot remove user-defined params. Therefore, there is no way
     to automatically configure it.
@@ -182,7 +177,7 @@ description:
   type: str
   sample: Important Monitor
 interval:
-  description: The new interval in which to run the monitor check.
+  description: The new interval at which to run the monitor check.
   returned: changed
   type: int
   sample: 2
@@ -242,6 +237,7 @@ disk_threshold:
   type: int
   sample: 34
 '''
+from datetime import datetime
 
 from ansible.module_utils.basic import (
     AnsibleModule, env_fallback
@@ -252,6 +248,8 @@ from ..module_utils.common import (
     F5ModuleError, AnsibleF5Parameters, transform_name, f5_argument_spec, fq_name
 )
 from ..module_utils.compare import cmp_str_with_none
+from ..module_utils.icontrol import tmos_version
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -528,6 +526,8 @@ class ModuleManager(object):
         return False
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         changed = False
         result = dict()
         state = self.want.state
@@ -542,6 +542,7 @@ class ModuleManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, version)
         return result
 
     def _announce_deprecations(self, result):

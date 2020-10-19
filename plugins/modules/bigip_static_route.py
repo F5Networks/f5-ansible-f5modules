@@ -7,17 +7,12 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['stableinterface'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_static_route
 short_description: Manipulate static routes on a BIG-IP
 description:
-  - Manipulate static routes on a BIG-IP.
+  - Manipulate static routes on a BIG-IP system.
 version_added: "1.0.0"
 options:
   name:
@@ -47,8 +42,8 @@ options:
       - Specifies the router for the system to use when forwarding packets
         to the destination host or network. Also known as the next-hop router
         address. This can be either an IPv4 or IPv6 address. When it is an
-        IPv6 address that starts with C(FE80:), the address will be treated
-        as a link-local address. This requires that the C(vlan) parameter
+        IPv6 address that starts with C(FE80:), the address is treated
+        as a link-local address. This requires the C(vlan) parameter
         also be supplied.
     type: str
   vlan:
@@ -64,7 +59,7 @@ options:
     type: str
   reject:
     description:
-      - Specifies that the system drops packets sent to the destination.
+      - Specifies the system drops packets sent to the destination.
     type: bool
   mtu:
     description:
@@ -72,8 +67,8 @@ options:
     type: str
   route_domain:
     description:
-      - The route domain id of the system. When creating a new static route, if
-        this value is not specified, a default value of C(0) will be used.
+      - The route domain ID of the system. When creating a new static route, if
+        this value is not specified, the default value is C(0).
       - This value cannot be changed once it is set.
     type: int
   partition:
@@ -83,8 +78,8 @@ options:
     default: Common
   state:
     description:
-      - When C(present), ensures that the static route exists.
-      - When C(absent), ensures that the static does not exist.
+      - When C(present), ensures the static route exists.
+      - When C(absent), ensures the static does not exist.
     type: str
     choices:
       - present
@@ -112,22 +107,22 @@ EXAMPLES = r'''
 
 RETURN = r'''
 vlan:
-  description: Whether the banner is enabled or not.
+  description: The VLAN or Tunnel through which the system forwards packets to the destination.
   returned: changed
   type: str
-  sample: true
+  sample: /Common/vlan1
 gateway_address:
-  description: Whether the banner is enabled or not.
+  description: The router for the system to use when forwarding packets to the destination host or network.
   returned: changed
   type: str
-  sample: true
+  sample: 10.2.2.3
 destination:
-  description: Whether the banner is enabled or not.
+  description: An IP address for the static entry in the routing table.
   returned: changed
   type: str
-  sample: true
+  sample: 0.0.0.0/0
 route_domain:
-  description: Route domain of the static route.
+  description: The route domain ID of the system.
   returned: changed
   type: int
   sample: 1
@@ -140,39 +135,35 @@ pool:
   description: Whether the banner is enabled or not.
   returned: changed
   type: str
-  sample: true
+  sample: yes
 partition:
   description: The partition that the static route was created on.
   returned: changed
   type: str
   sample: Common
 description:
-  description: Whether the banner is enabled or not.
+  description: Descriptive text that identifies the route.
   returned: changed
   type: str
-  sample: true
+  sample: "Route tho DMZ"
 reject:
-  description: Whether the banner is enabled or not.
+  description: Specifies the system drops packets sent to the destination.
   returned: changed
-  type: str
+  type: bool
   sample: true
 '''
 
 import re
+from datetime import datetime
 
 from ansible.module_utils.basic import (
     AnsibleModule, env_fallback
 )
 from ansible.module_utils.parsing.convert_bool import BOOLEANS_TRUE
 
-try:
-    from ansible_collections.ansible.netcommon.plugins.module_utils.compat.ipaddress import (
-        ip_network, ip_interface, ip_address
-    )
-except ImportError:
-    from ansible.module_utils.compat.ipaddress import (
-        ip_network, ip_interface, ip_address
-    )
+from ansible_collections.ansible.netcommon.plugins.module_utils.compat.ipaddress import (
+    ip_network, ip_interface, ip_address
+)
 
 from ..module_utils.bigip import F5RestClient
 from ..module_utils.common import (
@@ -181,6 +172,8 @@ from ..module_utils.common import (
 from ..module_utils.ipaddress import (
     is_valid_ip, ipv6_netmask_to_cidr
 )
+from ..module_utils.icontrol import tmos_version
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -475,6 +468,8 @@ class ModuleManager(object):
         return False
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         changed = False
         result = dict()
         state = self.want.state
@@ -489,6 +484,7 @@ class ModuleManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, version)
         return result
 
     def _announce_deprecations(self, result):

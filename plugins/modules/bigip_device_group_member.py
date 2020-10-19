@@ -7,11 +7,6 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['stableinterface'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_device_group_member
@@ -34,12 +29,12 @@ options:
     required: True
   device_group:
     description:
-      - The device group that you want to add the member to.
+      - The device group to which you want to add the member.
     type: str
     required: True
   state:
     description:
-      - When C(present), ensures that the device group member exists.
+      - When C(present), ensures the device group member exists.
       - When C(absent), ensures the device group member is removed.
     type: str
     choices:
@@ -79,13 +74,15 @@ EXAMPLES = r'''
 RETURN = r'''
 # only common fields returned
 '''
-
+from datetime import datetime
 from ansible.module_utils.basic import AnsibleModule
 
 from ..module_utils.bigip import F5RestClient
 from ..module_utils.common import (
     F5ModuleError, AnsibleF5Parameters, f5_argument_spec
 )
+from ..module_utils.icontrol import tmos_version
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -159,6 +156,8 @@ class ModuleManager(object):
             )
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         changed = False
         result = dict()
         state = self.want.state
@@ -173,6 +172,7 @@ class ModuleManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, version)
         return result
 
     def present(self):

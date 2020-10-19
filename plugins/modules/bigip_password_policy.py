@@ -7,24 +7,19 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['preview'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_password_policy
 short_description: Manages the authentication password policy on a BIG-IP
 description:
-  - Manages the authentication password policy on a BIG-IP.
+  - Manages the authentication password policy on a BIG-IP device.
 version_added: "1.0.0"
 options:
   expiration_warning:
     description:
       - Specifies the number of days before a password expires.
-      - Based on this value, the BIG-IP system automatically warns users when their
-        password is about to expire.
+      - This value determines when the BIG-IP system automatically
+        warns users their password is about to expire.
     type: int
   max_duration:
     description:
@@ -33,7 +28,7 @@ options:
   max_login_failures:
     description:
       - Specifies the number of consecutive unsuccessful login attempts
-        that the system allows before locking out the user.
+        the system allows before locking out the user.
       - Specify zero (0) to disable this parameter.
     type: int
   min_duration:
@@ -108,12 +103,12 @@ max_login_failures:
   type: int
   sample: 0
 min_duration:
-  description: The new min duration.
+  description: The new minimum duration.
   returned: changed
   type: int
   sample: 0
 min_length:
-  description: The new min password length.
+  description: The new minimum password length.
   returned: changed
   type: int
   sample: 6
@@ -148,6 +143,7 @@ password_memory:
   type: int
   sample: 0
 '''
+from datetime import datetime
 
 from ansible.module_utils.basic import AnsibleModule
 
@@ -155,6 +151,8 @@ from ..module_utils.bigip import F5RestClient
 from ..module_utils.common import (
     F5ModuleError, AnsibleF5Parameters, f5_argument_spec, flatten_boolean
 )
+from ..module_utils.icontrol import tmos_version
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -320,6 +318,8 @@ class ModuleManager(object):
             )
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         result = dict()
 
         changed = self.present()
@@ -329,6 +329,7 @@ class ModuleManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, version)
         return result
 
     def present(self):

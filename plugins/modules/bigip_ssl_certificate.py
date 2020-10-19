@@ -7,17 +7,12 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['stableinterface'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_ssl_certificate
 short_description: Import/Delete certificates from BIG-IP
 description:
-  - This module will import/delete SSL certificates on BIG-IP LTM.
+  - This module imports/deletes SSL certificates on BIG-IP LTM.
     Certificates can be imported from certificate and key files on the local
     disk, in PEM format.
 version_added: "1.0.0"
@@ -25,7 +20,7 @@ options:
   content:
     description:
       - Sets the contents of a certificate directly to the specified value.
-        This is used with lookup plugins or for anything with formatting or
+        This is used with lookup plugins or for anything with formatting, or
       - C(content) must be provided when C(state) is C(present).
     type: str
     aliases: ['cert_content']
@@ -41,7 +36,7 @@ options:
   name:
     description:
       - SSL Certificate Name. This is the cert name used when importing a certificate
-        into the F5. It also determines the filenames of the objects on the LTM.
+        into the BIG-IP. It also determines the filenames of the objects on the LTM.
     type: str
     required: True
   issuer_cert:
@@ -56,7 +51,7 @@ options:
     default: Common
 notes:
   - This module does not behave like other modules that you might include in
-    roles where referencing files or templates first looks in the role's
+    roles, where referencing files or templates first looks in the role's
     files or templates directory. To have it behave that way, use the Ansible
     file or template lookup (see Examples). The lookups behave as expected in
     a role context.
@@ -104,7 +99,7 @@ EXAMPLES = r'''
 
 RETURN = r'''
 cert_name:
-  description: The name of the certificate that the user provided
+  description: The name of the certificate.
   returned: created
   type: str
   sample: cert1
@@ -115,7 +110,7 @@ filename:
   type: str
   sample: cert1.crt
 checksum:
-  description: SHA1 checksum of the cert that was provided.
+  description: SHA1 checksum of the cert.
   returned: changed and created
   type: str
   sample: f7ff9e8b7bb2e09b70935a5d785e0cc5d9d0abf0
@@ -129,6 +124,7 @@ source_path:
 import hashlib
 import os
 import re
+from datetime import datetime
 
 from ansible.module_utils.basic import (
     AnsibleModule, env_fallback
@@ -138,7 +134,10 @@ from ..module_utils.bigip import F5RestClient
 from ..module_utils.common import (
     F5ModuleError, AnsibleF5Parameters, transform_name, f5_argument_spec, fq_name
 )
-from ..module_utils.icontrol import upload_file
+from ..module_utils.icontrol import (
+    upload_file, tmos_version
+)
+from ..module_utils.teem import send_teem
 
 try:
     from StringIO import StringIO
@@ -241,7 +240,7 @@ class Changes(Parameters):
                 result[returnable] = getattr(self, returnable)
             result = self._filter_params(result)
         except Exception:
-            pass
+            raise
         return result
 
 
@@ -304,6 +303,8 @@ class ModuleManager(object):
         self.changes = UsableChanges()
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         changed = False
         result = dict()
         state = self.want.state
@@ -318,6 +319,7 @@ class ModuleManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, version)
         return result
 
     def _announce_deprecations(self, result):
@@ -339,6 +341,7 @@ class ModuleManager(object):
         if self.module.check_mode:
             return True
         self.create_on_device()
+        self.remove_uploaded_file_from_device(self.want.filename)
         return True
 
     def should_update(self):
@@ -354,6 +357,7 @@ class ModuleManager(object):
         if self.module.check_mode:
             return True
         self.update_on_device()
+        self.remove_uploaded_file_from_device(self.want.filename)
         return True
 
     def absent(self):
@@ -392,6 +396,25 @@ class ModuleManager(object):
             self.changes = UsableChanges(params=changed)
             return True
         return False
+
+    def remove_uploaded_file_from_device(self, name):
+        filepath = '/var/config/rest/downloads/{0}'.format(name)
+        params = {
+            "command": "run",
+            "utilCmdArgs": filepath
+        }
+        uri = "https://{0}:{1}/mgmt/tm/util/unix-rm".format(
+            self.client.provider['server'],
+            self.client.provider['server_port']
+        )
+        resp = self.client.api.post(uri, json=params)
+        try:
+            response = resp.json()
+        except ValueError as ex:
+            raise F5ModuleError(str(ex))
+        if resp.status in [200, 201] or 'code' in response and response['code'] in [200, 201]:
+            return True
+        raise F5ModuleError(resp.content)
 
     def exists(self):
         uri = "https://{0}:{1}/mgmt/tm/sys/file/ssl-cert/{2}".format(
@@ -445,11 +468,10 @@ class ModuleManager(object):
         except ValueError as ex:
             raise F5ModuleError(str(ex))
 
-        if 'code' in response and response['code'] == 400:
-            if 'message' in response:
-                raise F5ModuleError(response['message'])
-            else:
-                raise F5ModuleError(resp.content)
+        if resp.status in [200, 201] or 'code' in response and response['code'] in [200, 201]:
+            return True
+
+        raise F5ModuleError(resp.content)
 
     def create_on_device(self):
         content = StringIO(self.want.content)
@@ -470,11 +492,8 @@ class ModuleManager(object):
         except ValueError as ex:
             raise F5ModuleError(str(ex))
 
-        if 'code' in response and response['code'] in [400, 403]:
-            if 'message' in response:
-                raise F5ModuleError(response['message'])
-            else:
-                raise F5ModuleError(resp.content)
+        if resp.status not in [200, 201] or 'code' in response and response['code'] not in [200, 201]:
+            raise F5ModuleError(resp.content)
 
         # This needs to be done because of the way that BIG-IP creates certificates.
         #
@@ -494,11 +513,10 @@ class ModuleManager(object):
             except ValueError as ex:
                 raise F5ModuleError(str(ex))
 
-            if 'code' in response and response['code'] == 400:
-                if 'message' in response:
-                    raise F5ModuleError(response['message'])
-                else:
-                    raise F5ModuleError(resp.content)
+            if resp.status in [200, 201] or 'code' in response and response['code'] in [200, 201]:
+                return True
+
+            raise F5ModuleError(resp.content)
 
     def read_current_from_device(self):
         uri = "https://{0}:{1}/mgmt/tm/sys/file/ssl-cert/{2}".format(
@@ -515,12 +533,9 @@ class ModuleManager(object):
         except ValueError as ex:
             raise F5ModuleError(str(ex))
 
-        if 'code' in response and response['code'] == 400:
-            if 'message' in response:
-                raise F5ModuleError(response['message'])
-            else:
-                raise F5ModuleError(resp.content)
-        return ApiParameters(params=response)
+        if resp.status in [200, 201] or 'code' in response and response['code'] in [200, 201]:
+            return ApiParameters(params=response)
+        raise F5ModuleError(resp.content)
 
     def remove_from_device(self):
         uri = "https://{0}:{1}/mgmt/tm/sys/file/ssl-cert/{2}".format(

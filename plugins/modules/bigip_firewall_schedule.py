@@ -7,17 +7,12 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['stableinterface'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_firewall_schedule
 short_description: Manage BIG-IP AFM schedule configurations
 description:
-  - Manage BIG-IP AFM schedule configurations.
+  - Manage BIG-IP AFM (Avanced Firewall Manager) schedule configurations.
 version_added: "1.0.0"
 options:
   name:
@@ -48,21 +43,21 @@ options:
     description:
       - Specifies the end date/time this schedule will apply to the rule.
       - The date must be after C(date_valid_start)
-      - When not defined the default of C(indefinite) is used when creating a new schedule.
+      - When not defined, the default of C(indefinite) is used when creating a new schedule.
       - The time zone is always assumed to be UTC.
-      - The datetime format should always be the following C(YYYY-MM-DD:HH:MM:SS) format.
+      - The datetime format should always be in C(YYYY-MM-DD:HH:MM:SS) format.
     type: str
   date_valid_start:
     description:
       - Specifies the start date/time this schedule will apply to the rule.
       - When not defined the default of C(epoch) is used when creating a new schedule.
       - The time zone is always assumed to be UTC.
-      - The datetime format should always be the following C(YYYY-MM-DD:HH:MM:SS) format.
+      - The datetime format should always be in C(YYYY-MM-DD:HH:MM:SS) format.
     type: str
   days_of_week:
     description:
       - Specifies which days of the week the rule will be applied.
-      - When not defined the default value of C(all) is used when creating a new schedule.
+      - When not defined, the default value of C(all) is used when creating a new schedule.
       - The C(all) value is mutually exclusive with other choices.
     type: list
     elements: str
@@ -77,7 +72,7 @@ options:
       - all
   state:
     description:
-      - When C(present), ensures that the resource exists.
+      - When C(present), ensures the resource exists.
       - When C(absent), ensures the resource is removed.
     type: str
     choices:
@@ -201,6 +196,8 @@ from ..module_utils.common import (
 from ..module_utils.compare import (
     cmp_str_with_none, cmp_simple_list
 )
+from ..module_utils.icontrol import tmos_version
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -462,6 +459,8 @@ class ModuleManager(object):
             )
 
     def exec_module(self):
+        start = datetime.datetime.now().isoformat()
+        version = tmos_version(self.client)
         changed = False
         result = dict()
         state = self.want.state
@@ -476,6 +475,7 @@ class ModuleManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, version)
         return result
 
     def present(self):

@@ -7,11 +7,6 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['preview'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_asm_advanced_settings
@@ -28,7 +23,7 @@ options:
   state:
     description:
       - The state of the setting on the system. When C(present), guarantees
-        that an existing setting is set to C(value). When C(reset) sets the
+        that an existing setting is set to C(value). When C(reset), sets the
         setting back to the default value. At least one of value and state
         C(reset) are required.
     type: str
@@ -72,29 +67,32 @@ EXAMPLES = r'''
 
 RETURN = r'''
 name:
-  description: The name of the asm setting that was specified
+  description: The name of the ASM setting that was specified
   returned: changed and success
   type: str
   sample: long_request_buffer_size
 default_value:
-  description: The default value of the specified asm setting
+  description: The default value of the specified ASM setting
   returned: changed and success
   type: str
   sample: '10000000'
 value:
-  description: The value that you set the asm setting to
+  description: The value you set the ASM setting to
   returned: changed and success
   type: str
   sample: '20000000'
 '''
-
+from datetime import datetime
 from ansible.module_utils.basic import AnsibleModule
 
 from ..module_utils.bigip import F5RestClient
 from ..module_utils.common import (
     F5ModuleError, AnsibleF5Parameters, f5_argument_spec
 )
-from ..module_utils.icontrol import module_provisioned
+from ..module_utils.icontrol import (
+    module_provisioned, tmos_version
+)
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -228,6 +226,8 @@ class ModuleManager(object):
         return False
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         if not module_provisioned(self.client, 'asm'):
             raise F5ModuleError(
                 "ASM must be provisioned to use this module."
@@ -246,6 +246,7 @@ class ModuleManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, version)
         return result
 
     def present(self):

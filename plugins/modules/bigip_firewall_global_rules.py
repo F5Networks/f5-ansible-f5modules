@@ -7,20 +7,15 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['stableinterface'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_firewall_global_rules
 short_description: Manage AFM global rule settings on BIG-IP
 description:
-  - Configures the global network firewall rules. These firewall rules are
-    applied to all packets except those going through the management
-    interface. They are applied first, before any firewall rules for the
-    packet's virtual server, route domain, and/or self IP.
+  - Configures the global network firewall rules on AFM (Advanced Firewall Manager).
+    These firewall rules are applied to all packets except those going through
+    the management interface. They are applied first, before any firewall rules
+    for the packet's virtual server, route domain, and/or self IP address.
 version_added: "1.0.0"
 options:
   enforced_policy:
@@ -31,10 +26,10 @@ options:
   service_policy:
     description:
       - Specifies a service policy that would apply to traffic globally.
-      - The service policy is applied to all flows, provided if there are
-        no other context specific service policy configuration that
-        overrides the global service policy. For example, when a service
-        policy is configured both at a global level, as well as on a
+      - The service policy is applied to all flows, provided there are
+        no other context specific service policy configurations that
+        override the global service policy. For example, when a service
+        policy is configured both at a global level and on a
         firewall rule, and a flow matches the rule, the more specific
         service policy configuration in the rule will override the service
         policy setting at the global level.
@@ -45,7 +40,7 @@ options:
     description:
       - Specifies a staged firewall policy.
       - C(staged_policy) rules are not enforced while all the visibility
-        aspects namely statistics, reporting and logging function as if
+        aspects (statistics, reporting, and logging) function as if
         the staged-policy rules were enforced globally.
     type: str
   description:
@@ -90,6 +85,7 @@ description:
   type: str
   sample: My description
 '''
+from datetime import datetime
 
 from ansible.module_utils.basic import AnsibleModule
 
@@ -98,6 +94,8 @@ from ..module_utils.common import (
     F5ModuleError, AnsibleF5Parameters, f5_argument_spec, fq_name
 )
 from ..module_utils.compare import cmp_str_with_none
+from ..module_utils.icontrol import tmos_version
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -270,6 +268,8 @@ class ModuleManager(object):
         return False
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         result = dict()
 
         changed = self.present()
@@ -279,6 +279,7 @@ class ModuleManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, version)
         return result
 
     def _announce_deprecations(self, result):

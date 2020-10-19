@@ -7,11 +7,6 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['preview'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_interface
@@ -32,13 +27,13 @@ options:
   enabled:
     description:
       - Specifies the current status of the interface.
-      - When C(yes) enables the interface to pass traffic.
-      - When C(no) disables the interface from passing traffic.
+      - When C(yes), enables the interface to pass traffic.
+      - When C(no), disables the interface from passing traffic.
     type: bool
   bundle:
     description:
       - Enables or disables bundle capability.
-      - This option is only supported on selected hardware platforms and interfaces.
+      - This option is only supported on select hardware platforms and interfaces.
       - "Attempting to enable this option on a C(VE) or any other unsupported platform/interface
         will result in module run failure."
     type: str
@@ -48,7 +43,7 @@ options:
       - not-supported
   bundle_speed:
     description:
-      - Sets the bundle speed, the setting is applicable only when the bundle is C(yes).
+      - Sets the bundle speed, which is applicable only when the bundle is C(yes).
       - This option is only supported on selected hardware platforms and interfaces.
       - "Attempting to enable this option on a C(VE) or any other unsupported platform/interface
         will result in module run failure."
@@ -147,11 +142,11 @@ options:
   flow_control:
     description:
       - Specifies how the system controls the sending of PAUSE frames.
-      - When C(tx-rx) the interface honors pause frames from its partner,
+      - When C(tx-rx), the interface honors pause frames from its partner,
         and also generates pause frames when necessary.
-      - When C(tx) the interface ignores pause frames from its partner, and generates pause frames when necessary.
-      - When C(rx) the interface honors pause frames from its partner, but does not generate pause frames.
-      - When (none) the flow control is disabled on the interface.
+      - When C(tx), the interface ignores pause frames from its partner, and generates pause frames when necessary.
+      - When C(rx), the interface honors pause frames from its partner, but does not generate pause frames.
+      - When (none), the flow control is disabled on the interface.
     type: str
     choices:
       - none
@@ -182,13 +177,13 @@ options:
   lldp_admin:
     description:
       - Specifies LLDP settings on an interface level.
-      - When C(disabled) the interface neither transmits (sends) LLDP messages to nor receives LLDP messages
+      - When C(disabled), the interface neither transmits (sends) LLDP messages to nor receives LLDP messages
         from neighboring devices.
-      - When C(txonly) the interface transmits LLDP messages to neighbor devices but does not receive LLDP messages
+      - When C(txonly), the interface transmits LLDP messages to neighbor devices, but does not receive LLDP messages
         from neighbor devices.
-      - When C(rxonly) the interface receives LLDP messages from neighbor devices but does not transmit LLDP messages
+      - When C(rxonly), the interface receives LLDP messages from neighbor devices, but does not transmit LLDP messages
         to neighbor devices.
-      - When C(txrx) the interface transmits LLDP messages to and receives LLDP messages from neighboring devices.
+      - When C(txrx), the interface transmits LLDP messages to and receives LLDP messages from neighboring devices.
     type: str
     choices:
       - disable
@@ -198,11 +193,11 @@ options:
   lldp_tlvmap:
     description:
       - Specifies the content of an LLDP message being sent or received.
-      - "Each LLDP attribute that is specified with this setting is optional and is in the form of Type, Length, Value
+      - "Each LLDP attribute specified with this setting is optional and is in the form of Type, Length, Value
         (TLV)."
       - "The three mandatory TLVs not taken into account when calculating this value are: C(Chassis ID), C(Port ID),
         and C(TTL)."
-      - The optional attributes that are possible to specify have a specific TLV numeric value mapped to them.
+      - The optional attributes that are available have a specific TLV numeric value mapped to them.
       - The C(Port Description) attribute has a TLV value of C(8).
       - The C(System Name) attribute has a TLV value of C(16).
       - The C(System Description) attribute has a TLV value of C(32).
@@ -227,7 +222,7 @@ options:
   stp_auto_edge_port:
     description:
       - Sets STP automatic edge port detection for the interface.
-      - "When C(yes) the system monitors the interface for incoming STP, RSTP, or MSTP packets. If no such packets are
+      - "When C(yes), the system monitors the interface for incoming STP, RSTP, or MSTP packets. If no such packets are
         received for a sufficient period of time (about three seconds), the interface is automatically given edge port
         status."
       - When C(no), the system never gives the interface edge port status automatically. Any STP setting set on a
@@ -251,7 +246,7 @@ options:
     suboptions:
       poll_interval:
         description:
-          - Specifies the maximum interval in seconds between two pollings.
+          - Specifies the maximum interval between two pollings, in seconds.
           - For this setting to take effect, C(poll_interval_global) must be set to C(no).
           - The valid range is 0 - 4294967295.
         type: int
@@ -417,6 +412,8 @@ sflow:
 '''
 
 import copy
+from datetime import datetime
+
 from ansible.module_utils.basic import AnsibleModule
 
 from ..module_utils.bigip import F5RestClient
@@ -424,6 +421,8 @@ from ..module_utils.common import (
     F5ModuleError, AnsibleF5Parameters, f5_argument_spec, flatten_boolean
 )
 from ..module_utils.compare import cmp_str_with_none
+from ..module_utils.icontrol import tmos_version
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -746,6 +745,8 @@ class ModuleManager(object):
             )
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         result = dict()
 
         changed = self.present()
@@ -755,6 +756,7 @@ class ModuleManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, version)
         return result
 
     def present(self):

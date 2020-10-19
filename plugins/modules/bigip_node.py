@@ -7,11 +7,6 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['preview'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_node
@@ -23,11 +18,11 @@ options:
   state:
     description:
       - Specifies the current state of the node. C(enabled) (All traffic
-        allowed), specifies that system sends traffic to this node regardless
+        allowed), specifies the system sends traffic to this node regardless
         of the node's state. C(disabled) (Only persistent or active connections
-        allowed), Specifies that the node can handle only persistent or
+        allowed), specifies the node can handle only persistent or
         active connections. C(offline) (Only active connections allowed),
-        Specifies that the node can handle only active connections. In all
+        specifies the node can handle only active connections. In all
         cases except C(absent), the node will be created if it does not yet
         exist.
       - Be particularly careful about changing the status of a node whose FQDN
@@ -53,7 +48,7 @@ options:
         pool, if this value is not specified, the default of 'and_list' will
         be used.
       - Both C(single) and C(and_list) are functionally identical since BIG-IP
-        considers all monitors as "a list". BIG=IP either has a list of many,
+        considers all monitors as "a list". BIG-IP either has a list of many,
         or it has a list of one. Where they differ is in the extra guards that
         C(single) provides; namely that it only allows a single monitor.
     type: str
@@ -67,14 +62,14 @@ options:
     type: int
   monitors:
     description:
-      - Specifies the health monitors that the system currently uses to
+      - Specifies the health monitors the system currently uses to
         monitor this node.
     type: list
     elements: str
   address:
     description:
       - IP address of the node. This can be either IPv4 or IPv6. When creating a
-        new node, one of either C(address) or C(fqdn) must be provided. This
+        new node, you must provide one of either C(address) or C(fqdn). This
         parameter cannot be updated after it is set.
     type: str
     aliases:
@@ -85,11 +80,11 @@ options:
       - FQDN name of the node. This can be any name that is a valid RFC 1123 DNS
         name. Therefore, the only characters that can be used are "A" to "Z",
         "a" to "z", "0" to "9", the hyphen ("-") and the period (".").
-      - FQDN names must include at lease one period; delineating the host from
-        the domain. ex. C(host.domain).
+      - FQDN names must include at least one period; delineating the host from
+        the domain. For example, C(host.domain).
       - FQDN names must end with a letter or a number.
-      - When creating a new node, one of either C(address) or C(fqdn) must be
-        provided. This parameter cannot be updated after it is set.
+      - When creating a new node, you must provide one of either C(address) or C(fqdn) provided.
+        This parameter cannot be updated after it is set.
     type: str
     aliases:
       - hostname
@@ -121,12 +116,12 @@ options:
     type: bool
   fqdn_up_interval:
     description:
-      - Specifies the interval in which a query occurs, when the DNS server is up.
+      - Specifies the interval at which a query occurs, when the DNS server is up.
         The associated monitor attempts to probe three times, and marks the server
         down if it there is no response within the span of three times the interval
         value, in seconds.
-      - This parameter accepts a value of C(ttl) to query based off of the TTL of
-        the FQDN. The default TTL interval is akin to specifying C(3600).
+      - This parameter accepts a value of C(ttl) to query, based off of the TTL of
+        the FQDN. The default TTL interval is similar to specifying C(3600).
       - When creating a new node, if this parameter is not specified and C(fqdn) is
         specified, this parameter will default to C(3600).
     type: str
@@ -145,11 +140,11 @@ options:
     type: str
   connection_limit:
     description:
-      - Node connection limit. Setting this to 0 disables the limit.
+      - Node connection limit. Setting this to C(0) disables the limit.
     type: int
   rate_limit:
     description:
-      - Node rate limit (connections-per-second). Setting this to 0 disables the limit.
+      - Node rate limit (connections-per-second). Setting this to C(0) disables the limit.
     type: int
   ratio:
     description:
@@ -165,7 +160,7 @@ options:
     type: int
   availability_requirements:
     description:
-      - Specifies, if you activate more than one health monitor, the number of health
+      - If you activate more than one health monitor, specifies the number of health
         monitors that must receive successful responses in order for the link to be
         considered available.
     type: dict
@@ -303,6 +298,7 @@ state:
 
 import re
 import time
+from datetime import datetime
 
 from ansible.module_utils.basic import (
     AnsibleModule, env_fallback
@@ -315,6 +311,8 @@ from ..module_utils.bigip import F5RestClient
 from ..module_utils.common import (
     F5ModuleError, AnsibleF5Parameters, transform_name, f5_argument_spec, fq_name
 )
+from ..module_utils.icontrol import tmos_version
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -810,6 +808,8 @@ class ModuleManager(object):
             )
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         changed = False
         result = dict()
         state = self.want.state
@@ -826,6 +826,7 @@ class ModuleManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations()
+        send_teem(start, self.module, version)
         return result
 
     def present(self):

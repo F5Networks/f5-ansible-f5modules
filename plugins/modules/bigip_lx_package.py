@@ -7,28 +7,23 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['preview'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_lx_package
 short_description: Manages Javascript LX packages on a BIG-IP
 description:
-  - Manages Javascript LX packages on a BIG-IP. This module will allow
+  - Manages Javascript LX packages on a BIG-IP. This module allows
     you to deploy LX packages to the BIG-IP and manage their lifecycle.
 version_added: "1.0.0"
 options:
   package:
     description:
       - The LX package that you want to upload or remove. When C(state) is C(present),
-        and you intend to use this module in a C(role), it is recommended that you use
+        and you intend to use this module in a C(role), we recommend you use
         the C({{ role_path }}) variable. An example is provided in the C(EXAMPLES) section.
       - When C(state) is C(absent), it is not necessary for the package to exist on the
         Ansible controller. If the full path to the package is provided, the fileame will
-        specifically be cherry picked from it to properly remove the package.
+        specifically be cherry-picked from it to properly remove the package.
     type: path
   state:
     description:
@@ -40,17 +35,17 @@ options:
       - absent
   retain_package_file:
     description:
-      - Should the install file be deleted on successful installation of the package
+      - Specifies whether the install file should be deleted on successful installation of the package.
     type: bool
     default: no
     version_added: "1.4.0"
 notes:
-  - Requires the rpm tool be installed on the host. This can be accomplished through
+  - Requires the RPM tool be installed on the host. This can be accomplished in
     different ways on each platform. On Debian based systems with C(apt);
     C(apt-get install rpm). On Mac with C(brew); C(brew install rpm).
     This command is already present on RedHat based systems.
-  - Requires BIG-IP >= 12.1.0 because the required functionality is missing
-    on versions earlier than that.
+  - Requires BIG-IP >= 12.1.0, because the required functionality is missing
+    on prior versions.
   - The module name C(bigip_iapplx_package) has been deprecated in favor of C(bigip_lx_package).
 requirements:
   - Requires BIG-IP >= 12.1.0
@@ -107,10 +102,12 @@ RETURN = r'''
 
 import os
 import time
+from datetime import datetime
+from distutils.version import LooseVersion
 
 from ansible.module_utils.basic import AnsibleModule
 from ansible.module_utils.urls import urlparse
-from distutils.version import LooseVersion
+
 from ..module_utils.bigip import F5RestClient
 from ..module_utils.common import (
     F5ModuleError, AnsibleF5Parameters, f5_argument_spec, flatten_boolean
@@ -118,6 +115,7 @@ from ..module_utils.common import (
 from ..module_utils.icontrol import (
     tmos_version, upload_file
 )
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -208,10 +206,10 @@ class ModuleManager(object):
 
     def exec_module(self):
         result = dict()
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         changed = False
         state = self.want.state
-
-        version = tmos_version(self.client)
         if LooseVersion(version) <= LooseVersion('12.0.0'):
             raise F5ModuleError(
                 "This version of BIG-IP is not supported."
@@ -225,6 +223,7 @@ class ModuleManager(object):
         changes = self.changes.to_return()
         result.update(**changes)
         result.update(dict(changed=changed))
+        send_teem(start, self.module, version)
         return result
 
     def present(self):
@@ -361,11 +360,12 @@ class ModuleManager(object):
             response = resp.json()
         except ValueError as ex:
             raise F5ModuleError(str(ex))
-
         if resp.status in [200, 201] or 'code' in response and response['code'] in [200, 201]:
-            if 'commandResult' in response and self.want.package_file in response['commandResult']:
-                return True
-            return False
+            if 'commandResult' in response:
+                if 'No such file or directory' in response['commandResult']:
+                    return False
+                elif self.want.package_file in response['commandResult']:
+                    return True
         raise F5ModuleError(resp.content)
 
     def remove_package_file_from_device(self):

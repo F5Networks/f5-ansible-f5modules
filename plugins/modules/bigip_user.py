@@ -7,22 +7,17 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['stableinterface'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_user
 short_description: Manage user accounts and user attributes on a BIG-IP
 description:
-  - Manage user accounts and user attributes on a BIG-IP. Typically this
-    module operates only on the REST API users and not the CLI users.
+  - Manage user accounts and user attributes on a BIG-IP system. Typically this
+    module operates only on REST API users and not CLI users.
     When specifying C(root), you may only change the password.
-    Your other parameters will be ignored in this case. Changing the C(root)
-    password is not an idempotent operation. Therefore, it will change it
-    every time this module attempts to change it.
+    Your other parameters are ignored in this case. Changing the C(root)
+    password is not an idempotent operation. Therefore, it changes the
+    password every time this module attempts to change it.
 version_added: "1.0.0"
 options:
   full_name:
@@ -31,7 +26,7 @@ options:
     type: str
   username_credential:
     description:
-      - Name of the user to create, remove or modify.
+      - Name of the user to create, remove, or modify.
       - The C(root) user may not be removed.
     type: str
     required: True
@@ -53,13 +48,13 @@ options:
   partition_access:
     description:
       - Specifies the administrative partition to which the user has access.
-        C(partition_access) is required when creating a new account.
-        Should be in the form "partition:role".
+        C(partition_access) is required when creating a new account, and
+        should be in the form "partition:role".
       - Valid roles include C(acceleration-policy-editor), C(admin), C(application-editor),
         C(auditor), C(certificate-manager), C(guest), C(irule-manager), C(manager), C(no-access),
         C(operator), C(resource-admin), C(user-manager), C(web-application-security-administrator),
         and C(web-application-security-editor).
-      - Partition portion of tuple should be an existing partition or the value 'all'.
+      - The partition portion the of tuple should be an existing partition or the value 'all'.
     type: list
     elements: str
   state:
@@ -73,9 +68,9 @@ options:
     default: present
   update_password:
     description:
-      - C(always) will allow to update passwords if the user chooses to do so.
-        C(on_create) will only set the password for newly created users.
-      - When C(username_credential) is C(root), this value will be forced to C(always).
+      - C(always) allows the user to update passwords.
+        C(on_create) only sets the password for newly created users.
+      - When C(username_credential) is C(root), this value is forced to C(always).
     type: str
     choices:
       - always
@@ -189,7 +184,7 @@ EXAMPLES = r'''
 
 RETURN = r'''
 full_name:
-  description: Full name of the user
+  description: Full name of the user.
   returned: changed and success
   type: str
   sample: John Doe
@@ -201,7 +196,7 @@ partition_access:
   type: list
   sample: ['all:admin']
 shell:
-  description: The shell assigned to the user account
+  description: The shell assigned to the user account.
   returned: changed and success
   type: str
   sample: tmsh
@@ -209,8 +204,8 @@ shell:
 
 import os
 import tempfile
-
-from ansible.module_utils._text import to_bytes
+from datetime import datetime
+from distutils.version import LooseVersion
 
 try:
     from BytesIO import BytesIO
@@ -221,7 +216,7 @@ from ansible.module_utils.basic import (
     AnsibleModule, env_fallback
 )
 from ansible.module_utils.six import string_types
-from distutils.version import LooseVersion
+from ansible.module_utils._text import to_bytes
 
 from ..module_utils.bigip import F5RestClient
 from ..module_utils.common import (
@@ -230,7 +225,7 @@ from ..module_utils.common import (
 from ..module_utils.icontrol import (
     tmos_version, upload_file
 )
-
+from ..module_utils.teem import send_teem
 
 try:
     # Crypto is used specifically for changing the root password via
@@ -529,6 +524,8 @@ class BaseManager(object):
         return False
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         changed = False
         result = dict()
         state = self.want.state
@@ -543,6 +540,7 @@ class BaseManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, version)
         return result
 
     def present(self):
@@ -822,6 +820,8 @@ class RootUserManager(BaseManager):
                 "required to change the 'root' password."
             )
 
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         changed = False
         result = dict()
         state = self.want.state
@@ -838,6 +838,7 @@ class RootUserManager(BaseManager):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, version)
         return result
 
     def exists(self):

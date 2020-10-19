@@ -7,17 +7,12 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['stableinterface'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_gtm_topology_region
 short_description: Manages GTM Topology Regions
 description:
-  - Manages GTM Topology Regions.
+  - Manages GTM (now BIG-IP DNS) Topology Regions.
 version_added: "1.0.0"
 options:
   name:
@@ -30,14 +25,14 @@ options:
       - Specifies the list of region members.
       - This list of members is all or nothing, in order to add or remove a member,
         you must specify the entire list of members.
-      - The list will override what is on the device if different.
-      - If an empty list is specified the region members list will be removed.
+      - The list will override what is on the device, if different.
+      - If you specify an empty list, the region members list is removed.
     type: list
     elements: dict
     suboptions:
       negate:
         description:
-          - When set to c(yes) the system selects this topology region, when the request source does not match.
+          - When set to c(yes), the system selects this topology region when the request source does not match.
           - Only a single list entry can be specified together with negate.
         type: bool
         default: no
@@ -58,7 +53,7 @@ options:
         type: str
       country:
         description:
-          - The country name, or code to use.
+          - The country name or code to use.
           - In addition to the country full names, you may also specify their abbreviated
             form, such as C(US) instead of C(United States).
           - Valid country codes can be found here https://countrycode.org/.
@@ -69,11 +64,11 @@ options:
         type: str
       pool:
         description:
-          - Specifies the name of GTM pool already defined in the configuration.
+          - Specifies the name of the GTM pool already defined in the configuration.
         type: str
       datacenter:
         description:
-          - Specifies the name of GTM data center already defined in the configuration.
+          - Specifies the name of the GTM data center already defined in the configuration.
         type: str
       isp:
         description:
@@ -94,7 +89,7 @@ options:
           - ShanghaiTelecom
       geo_isp:
         description:
-          - Specifies a geolocation ISP
+          - Specifies a geolocation ISP.
         type: str
   partition:
     description:
@@ -105,8 +100,8 @@ options:
     default: Common
   state:
     description:
-      - When C(state) is C(present), ensures that the region exists.
-      - When C(state) is C(absent), ensures that the region is removed.
+      - When C(state) is C(present), ensures the region exists.
+      - When C(state) is C(absent), ensures the region is removed.
     type: str
     choices:
       - present
@@ -159,6 +154,8 @@ region_members:
 '''
 
 import copy
+from datetime import datetime
+
 from ansible.module_utils.basic import (
     AnsibleModule, env_fallback
 )
@@ -170,6 +167,8 @@ from ..module_utils.common import (
 )
 from ..module_utils.ipaddress import is_valid_ip_network
 from ..module_utils.compare import cmp_simple_list
+from ..module_utils.icontrol import tmos_version
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -631,6 +630,8 @@ class ModuleManager(object):
             )
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         changed = False
         result = dict()
         state = self.want.state
@@ -645,6 +646,7 @@ class ModuleManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, version)
         return result
 
     def present(self):

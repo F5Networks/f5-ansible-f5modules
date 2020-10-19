@@ -7,11 +7,6 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['stableinterface'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_message_routing_peer
@@ -27,29 +22,29 @@ options:
     required: True
   description:
     description:
-      - The user defined description of the peer.
+      - The user-defined description of the peer.
     type: str
   type:
     description:
       - Parameter used to specify the type of the peer to manage.
-      - Default setting is C(generic) with more options added in future.
+      - Default setting is C(generic) with more options coming.
     type: str
     choices:
       - generic
     default: generic
   auto_init:
     description:
-      - If C(yes), the BIGIP will automatically create outbound connections to the active pool members in the
+      - If C(yes), the BIG-IP automatically creates outbound connections to the active pool members in the
         specified C(pool) using the configuration of the specified C(transport_config).
       - For auto-initialization to attempt to create a connection, the peer must be included in a route that is attached
-        to a router instance. For each router instance that the peer is contained in, a connection will be initiated.
-      - The C(auto_init) logic will verify at C(auto_init_interval) if the a connection exists between
-        the BIG-IP and the pool members of the pool. If a connection does not exist, it will attempt to reestablish one.
+        to a router instance. For each router instance the peer is contained in, a connection is initiated.
+      - The C(auto_init) logic verifies at C(auto_init_interval) if the a connection exists between
+        the BIG-IP and the pool members of the pool. If a connection does not exist, it attempts to reestablish one.
     type: bool
   auto_init_interval:
     description:
-      - Specifies the interval that attempts to initiate a connection occur.
-      - The default value upon peer object creation, that supplied by the system is C(5000) milliseconds.
+      - Specifies the interval at which attempts to initiate a connection occur.
+      - The default value upon peer object creation, that is supplied by the system is C(5000) milliseconds.
       - The accepted range is between 0 and 4294967295 inclusive.
     type: int
   connection_mode:
@@ -68,17 +63,17 @@ options:
     type: int
   pool:
     description:
-      - Specifies the name of the pool that messages will be routed towards.
+      - Specifies the name of the pool that messages are routed towards.
       - The specified pool must be on the same partition as the peer.
     type: str
   ratio:
     description:
-      - Specifies the ratio to be used for selection of a peer within a list of peers in a ltm route.
+      - Specifies the ratio to be used for selection of a peer within a list of peers in a LTM route.
       - The accepted range is between 0 and 4294967295 inclusive.
     type: int
   transport_config:
     description:
-      - The name of the ltm virtual or ltm transport-config to use for creating an outgoing connection.
+      - The name of the LTM virtual or LTM transport-config to use for creating an outgoing connection.
       - The resource must exist on the same partition as the peer object.
     type: str
   partition:
@@ -88,7 +83,7 @@ options:
     default: Common
   state:
     description:
-      - When C(present), ensures that the peer exists.
+      - When C(present), ensures the peer exists.
       - When C(absent), ensures the peer is removed.
     type: str
     choices:
@@ -158,7 +153,7 @@ auto_init:
   type: bool
   sample: yes
 auto_init_interval:
-  description: The interval that attempts to initiate a connection occur.
+  description: The interval at which attempts to initiate a connection occur.
   returned: changed
   type: int
   sample: 2000
@@ -173,7 +168,7 @@ number_of_connections:
   type: int
   sample: 2000
 transport_config:
-  description: The ltm virtual or ltm transport-config to use for creating an outgoing connection.
+  description: The LTM virtual or LTM transport-config to use for creating an outgoing connection.
   returned: changed
   type: str
   sample: /Common/foobar
@@ -183,21 +178,22 @@ description:
   type: str
   sample: Some description
 pool:
-  description: The name of the pool that messages will be routed towards.
+  description: The name of the pool that messages are routed towards.
   returned: changed
   type: str
   sample: /Bazbar/foobar
 ratio:
-  description: The ratio to be used for selection of a peer within a list of peers in a ltm route.
+  description: The ratio to be used for selection of a peer within a list of peers in a LTM route.
   returned: changed
   type: int
   sample: 500
 '''
+from datetime import datetime
+from distutils.version import LooseVersion
 
 from ansible.module_utils.basic import (
     AnsibleModule, env_fallback
 )
-from distutils.version import LooseVersion
 
 from ..module_utils.bigip import F5RestClient
 from ..module_utils.common import (
@@ -205,6 +201,7 @@ from ..module_utils.common import (
 )
 from ..module_utils.compare import cmp_str_with_none
 from ..module_utils.icontrol import tmos_version
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -416,6 +413,8 @@ class BaseManager(object):
             )
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         changed = False
         result = dict()
         state = self.want.state
@@ -430,6 +429,7 @@ class BaseManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, version)
         return result
 
     def present(self):

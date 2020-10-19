@@ -7,17 +7,12 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['preview'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_profile_ftp
 short_description: Manages FTP profiles
 description:
-  - Manages FTP profiles.
+  - Manages FTP profiles on the BIG-IP system.
 version_added: "1.0.0"
 options:
   name:
@@ -27,7 +22,7 @@ options:
     required: True
   allow_ftps:
     description:
-      - Allow explicit FTPS negotiation.
+      - Allows explicit FTPS negotiation.
     type: bool
   description:
     description:
@@ -56,7 +51,7 @@ options:
     description:
       - Translates RFC 2428 extended requests C(EPSV) and C(EPRT) to C(PASV) and C(PORT)
         when communicating with IPv4 servers.
-      - This option can only be used if the system is licensed for the BIG-IP Application Security Manager.
+      - This option can only be used if the system is licensed for the BIG-IP Application Security Manager (ASM).
     type: bool
   port:
     description:
@@ -66,12 +61,12 @@ options:
   security:
     description:
       - Enables secure FTP traffic for the BIG-IP Application Security Manager.
-      - This option can only be used if the system is licensed for the BIG-IP Application Security Manager.
+      - This option can only be used if the system is licensed for the BIG-IP ASM.
     type: bool
   state:
     description:
-      - When C(state) is C(present), ensures that the ftp profile exists.
-      - When C(state) is C(absent), ensures that the ftp profile is removed.
+      - When C(state) is C(present), ensures the ftp profile exists.
+      - When C(state) is C(absent), ensures the ftp profile is removed.
     type: str
     choices:
       - present
@@ -171,6 +166,7 @@ security:
   type: bool
   sample: no
 '''
+from datetime import datetime
 
 from ansible.module_utils.basic import (
     AnsibleModule, env_fallback
@@ -180,6 +176,8 @@ from ..module_utils.bigip import F5RestClient
 from ..module_utils.common import (
     F5ModuleError, AnsibleF5Parameters, transform_name, f5_argument_spec, flatten_boolean, fq_name
 )
+from ..module_utils.icontrol import tmos_version
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -451,6 +449,8 @@ class ModuleManager(object):
             )
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         changed = False
         result = dict()
         state = self.want.state
@@ -465,6 +465,7 @@ class ModuleManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, version)
         return result
 
     def present(self):

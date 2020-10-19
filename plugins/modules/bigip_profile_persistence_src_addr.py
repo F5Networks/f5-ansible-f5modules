@@ -7,17 +7,12 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['stableinterface'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_profile_persistence_src_addr
 short_description: Manage source address persistence profiles
 description:
-  - Manages source address persistence profiles.
+  - Manages source address persistence profiles on a BIG-IP.
 version_added: "1.0.0"
 options:
   name:
@@ -33,21 +28,21 @@ options:
     type: str
   match_across_services:
     description:
-      - When C(yes), specifies that all persistent connections from a client IP address that go
+      - When C(yes), specifies all persistent connections from a client IP address that go
         to the same virtual IP address also go to the same node.
       - When creating a new profile, if this parameter is not specified, the
         default is provided by the parent profile.
     type: bool
   match_across_virtuals:
     description:
-      - When C(yes), specifies that all persistent connections from the same client IP address
+      - When C(yes), specifies all persistent connections from the same client IP address
         go to the same node.
       - When creating a new profile, if this parameter is not specified, the
         default is provided by the parent profile.
     type: bool
   match_across_pools:
     description:
-      - When C(yes), specifies that the system can use any pool that contains this persistence
+      - When C(yes), specifies the system can use any pool that contains this persistence
         record.
       - When creating a new profile, if this parameter is not specified, the
         default is provided by the parent profile.
@@ -61,7 +56,7 @@ options:
     type: bool
   mask:
     description:
-      - Specifies a value that the system applies as the prefix length.
+      - Specifies a value the system applies as the prefix length.
       - When creating a new profile, if this parameter is not specified, the
         default is provided by the parent profile.
     type: str
@@ -69,9 +64,9 @@ options:
     description:
       - Specifies the algorithm the system uses for hash persistence load balancing. The hash
         result is the input for the algorithm.
-      - When C(default), specifies that the system uses the index of pool members to obtain the
+      - When C(default), specifies the system uses the index of pool members to obtain the
         hash result for the input to the algorithm.
-      - When C(carp), specifies that the system uses the Cache Array Routing Protocol (CARP)
+      - When C(carp), specifies the system uses the Cache Array Routing Protocol (CARP)
         to obtain the hash result for the input to the algorithm.
       - When creating a new profile, if this parameter is not specified, the
         default is provided by the parent profile.
@@ -89,7 +84,7 @@ options:
     type: str
   override_connection_limit:
     description:
-      - When C(yes), specifies that the system allows you to specify that pool member connection
+      - When C(yes), specifies the system allows you to specify that pool member connection
         limits will be overridden for persisted clients.
       - Per-virtual connection limits remain hard limits and are not overridden.
     type: bool
@@ -100,7 +95,7 @@ options:
     default: Common
   state:
     description:
-      - When C(present), ensures that the profile exists.
+      - When C(present), ensures the profile exists.
       - When C(absent), ensures the profile is removed.
     type: str
     choices:
@@ -176,7 +171,7 @@ mask:
   type: str
   sample: 255.255.255.255
 '''
-
+from datetime import datetime
 from ansible.module_utils.basic import (
     AnsibleModule, env_fallback
 )
@@ -186,6 +181,8 @@ from ..module_utils.common import (
     F5ModuleError, AnsibleF5Parameters, transform_name, f5_argument_spec, flatten_boolean, fq_name
 )
 from ..module_utils.ipaddress import is_valid_ip
+from ..module_utils.icontrol import tmos_version
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -428,6 +425,8 @@ class ModuleManager(object):
         return False
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         changed = False
         result = dict()
         state = self.want.state
@@ -442,6 +441,7 @@ class ModuleManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, version)
         return result
 
     def _announce_deprecations(self, result):

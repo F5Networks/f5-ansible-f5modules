@@ -7,11 +7,6 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['stableinterface'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_apm_acl
@@ -41,7 +36,7 @@ options:
     description:
       - Specifies a number that indicates the order of this ACL relative to other ACLs.
       - When not set, the device will always place the ACL after the last one created.
-      - The lower the number, the higher the ACL will be in the general order, with lowest number C(0) being the topmost one.
+      - The lower the number, the higher the ACL will be in the general order, with the lowest number C(0) being the topmost one.
       - Valid range of values is between C(0) and C(65535) inclusive.
     type: int
   path_match_case:
@@ -51,7 +46,7 @@ options:
   entries:
     description:
       - Access control entries that define the ACL matching and its respective behavior.
-      - The order in which the rules are placed as arguments to this parameter, determines their order in the ACL,
+      - The order in which the rules are placed as arguments to this parameter determines their order in the ACL,
         in other words changing the order of the same elements will cause a change on the unit.
     type: list
     elements: dict
@@ -99,7 +94,7 @@ options:
       dst_mask:
         description:
           - Optional parameter that specifies the destination network mask for the access control entry.
-          - If not specified and C(dst_addr) is not C(any) the C(dst_addr) is deemed to be host address.
+          - If not specified and C(dst_addr) is not C(any), the C(dst_addr) is deemed to be host address.
         type: str
       src_addr:
         description:
@@ -109,7 +104,7 @@ options:
       src_mask:
         description:
           - Optional parameter that specifies the source network mask for the access control entry.
-          - If not specified and C(src_addr) is not C(any) the C(src_addr) is deemed to be host address.
+          - If not specified and C(src_addr) is not C(any), the C(src_addr) is deemed to be host address.
         type: str
       scheme:
         description:
@@ -308,7 +303,7 @@ entries:
   returned: changed
   contains:
     action:
-      description: Action that the access control entry takes when a match for this access control entry is encountered.
+      description: Action the access control entry takes when a match for this access control entry is encountered.
       returned: changed
       type: str
       sample: allow
@@ -379,29 +374,27 @@ entries:
       sample: packet
   sample: hash/dictionary of values
 '''
+from datetime import datetime
 
 from ansible.module_utils.basic import (
     AnsibleModule, env_fallback
 )
-
-try:
-    from ansible_collections.ansible.netcommon.plugins.module_utils.compat.ipaddress import (
-        ip_network, ip_interface
-    )
-except ImportError:
-    from ansible.module_utils.compat.ipaddress import (
-        ip_network, ip_interface
-    )
+from ansible_collections.ansible.netcommon.plugins.module_utils.compat.ipaddress import (
+    ip_network, ip_interface
+)
 
 from ..module_utils.bigip import F5RestClient
 from ..module_utils.common import (
     F5ModuleError, AnsibleF5Parameters, transform_name, f5_argument_spec, flatten_boolean
 )
 from ..module_utils.compare import cmp_str_with_none
-from ..module_utils.icontrol import module_provisioned
+from ..module_utils.icontrol import (
+    module_provisioned, tmos_version
+)
 from ..module_utils.ipaddress import (
     is_valid_ip, is_valid_ip_network
 )
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -767,6 +760,8 @@ class ModuleManager(object):
             )
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         if not module_provisioned(self.client, 'apm'):
             raise F5ModuleError(
                 "APM must be provisioned to use this module."
@@ -785,6 +780,7 @@ class ModuleManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, version)
         return result
 
     def present(self):

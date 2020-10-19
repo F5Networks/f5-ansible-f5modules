@@ -131,9 +131,18 @@ class TestParameters(unittest.TestCase):
 
 
 class TestManager(unittest.TestCase):
-
     def setUp(self):
         self.spec = ArgumentSpec()
+        self.p2 = patch('ansible_collections.f5networks.f5_modules.plugins.modules.bigip_static_route.tmos_version')
+        self.p3 = patch('ansible_collections.f5networks.f5_modules.plugins.modules.bigip_static_route.send_teem')
+        self.m2 = self.p2.start()
+        self.m2.return_value = '14.1.0'
+        self.m3 = self.p3.start()
+        self.m3.return_value = True
+
+    def tearDown(self):
+        self.p2.stop()
+        self.p3.stop()
 
     def test_create_blackhole(self, *args):
         set_module_args(dict(
@@ -317,7 +326,7 @@ class TestManager(unittest.TestCase):
                 user='admin'
             )
         ))
-        with patch('ansible.module_utils.f5_utils.AnsibleModule.fail_json') as mo:
+        with patch('ansible.module_utils.basic.AnsibleModule.fail_json') as mo:
             mo.return_value = True
             AnsibleModule(
                 argument_spec=self.spec.argument_spec,

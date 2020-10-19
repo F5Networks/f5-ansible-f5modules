@@ -7,17 +7,12 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['preview'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_log_destination
 short_description: Manages log destinations on a BIG-IP.
 description:
-  - Manages log destinations on a BIG-IP.
+  - Manages log destinations on a BIG-IP device.
 version_added: "1.0.0"
 options:
   name:
@@ -91,8 +86,8 @@ options:
           - Specifies the method to use to format the logs associated with the remote Syslog log destination.
           - When creating a new log destination (and C(type) is C(remote-syslog)), if this parameter is
             not specified, the default is C(bsd-syslog).
-          - The C(syslog) and C(rfc5424) choices are two ways of saying the same thing.
-          - The C(bsd-syslog) and C(rfc3164) choices are two ways of saying the same thing.
+          - The C(syslog) and C(rfc5424) choices are the same.
+          - The C(bsd-syslog) and C(rfc3164) choices are the same.
         type: str
         choices:
           - bsd-syslog
@@ -113,8 +108,8 @@ options:
       - Specifies the method to use to format the logs associated with the remote Syslog log destination.
       - When creating a new log destination (and C(type) is C(remote-syslog)), if this parameter is
         not specified, the default is C(bsd-syslog).
-      - The C(syslog) and C(rfc5424) choices are two ways of saying the same thing.
-      - The C(bsd-syslog) and C(rfc3164) choices are two ways of saying the same thing.
+      - The C(syslog) and C(rfc5424) choices are the same.
+      - The C(bsd-syslog) and C(rfc3164) choices are the same.
     type: str
     choices:
       - bsd-syslog
@@ -230,7 +225,7 @@ options:
     default: Common
   state:
     description:
-      - When C(present), ensures that the resource exists.
+      - When C(present), ensures the resource exists.
       - When C(absent), ensures the resource is removed.
     type: str
     choices:
@@ -324,7 +319,7 @@ server_ssl_profile:
   type: str
   sample: /Common/serverssl
 '''
-
+from datetime import datetime
 from ansible.module_utils.basic import (
     AnsibleModule, env_fallback
 )
@@ -334,6 +329,8 @@ from ..module_utils.common import (
     F5ModuleError, AnsibleF5Parameters, transform_name, f5_argument_spec, fq_name
 )
 from ..module_utils.compare import cmp_str_with_none
+from ..module_utils.icontrol import tmos_version
+from ..module_utils.teem import send_teem
 
 
 class V1Parameters(AnsibleF5Parameters):
@@ -714,6 +711,8 @@ class BaseManager(object):
         return False
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         changed = False
         result = dict()
         state = self.want.state
@@ -728,6 +727,7 @@ class BaseManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, version)
         return result
 
     def _announce_deprecations(self, result):

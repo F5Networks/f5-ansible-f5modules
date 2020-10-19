@@ -7,42 +7,36 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['stableinterface'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_iapp_template
-short_description: Manages TCL iApp templates on a BIG-IP
+short_description: Manages TCL iApp templates on a BIG-IP.
 description:
-  - Manages TCL iApp templates on a BIG-IP. This module will allow you to
+  - Manages TCL iApp templates on a BIG-IP. This module allows you to
     deploy iApp templates to the BIG-IP and manage their lifecycle. The
-    conventional way to use this module is to import new iApps as needed
+    conventional way to use this module is to import new iApps as needed,
     or by extracting the contents of the iApp archive that is provided at
-    downloads.f5.com and then importing all the iApps with this module.
-    This module can also update existing iApps provided that the source
-    of the iApp changed while the name stayed the same. Note however that
+    downloads.f5.com, and then importing all the iApps with this module.
+    This module can also update existing iApps provided the source
+    of the iApp changed while the name stayed the same. Note that
     this module will not reconfigure any services that may have been
     created using the C(bigip_iapp_service) module. iApps are normally
     not updated in production. Instead, new versions are deployed and then
     existing services are changed to consume that new template. As such,
-    the ability to update templates in-place requires the C(force) option
-    to be used.
+    the ability to update templates in-place requires using the C(force) option.
 version_added: "1.0.0"
 options:
   force:
     description:
       - Specifies whether or not to force the uploading of an iApp. When
-        C(yes), will force update the iApp even if there are iApp services
-        using it. This will not update the running service though. Use
-        C(bigip_iapp_service) to do that. When C(no), will update the iApp
+        C(yes), the system will force update the iApp even if there are iApp services
+        using it. This will not update the running service, use
+        C(bigip_iapp_service) to do that. When C(no), the system updates the iApp
         only if there are no iApp services using the template.
     type: bool
   name:
     description:
-      - The name of the iApp template that you want to delete. This option
+      - The name of the iApp template you want to delete. This option
         is only available when specifying a C(state) of C(absent) and is
         provided as a way to delete templates that you may no longer have
         the source of.
@@ -112,6 +106,7 @@ RETURN = r'''
 
 import re
 import uuid
+from datetime import datetime
 
 from ansible.module_utils.basic import AnsibleModule
 from ansible.module_utils.basic import env_fallback
@@ -120,8 +115,10 @@ from ..module_utils.bigip import F5RestClient
 from ..module_utils.common import (
     F5ModuleError, AnsibleF5Parameters, transform_name, f5_argument_spec, fq_name
 )
-from ..module_utils.icontrol import upload_file
-
+from ..module_utils.icontrol import (
+    upload_file, tmos_version
+)
+from ..module_utils.teem import send_teem
 
 try:
     from StringIO import StringIO
@@ -247,6 +244,8 @@ class ModuleManager(object):
             )
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         changed = False
         result = dict()
         state = self.want.state
@@ -261,6 +260,7 @@ class ModuleManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, version)
         return result
 
     def present(self):

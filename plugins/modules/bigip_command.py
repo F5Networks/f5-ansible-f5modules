@@ -7,24 +7,19 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['stableinterface'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_command
 short_description: Run TMSH and BASH commands on F5 devices
 description:
-  - Sends a TMSH or BASH command to an BIG-IP node and returns the results
+  - Sends a TMSH or BASH command to a BIG-IP node and returns the results
     read from the device. This module includes an argument that will cause
     the module to wait for a specific condition before returning or timing
     out if the condition is not met.
   - This module is B(not) idempotent, nor will it ever be. It is intended as
     a stop-gap measure to satisfy automation requirements until such a time as
     a real module has been developed to configure in the way you need.
-  - If you are using this module, you should probably also be filing an issue
+  - If you are using this module, we recommend also filing an issue
     to have a B(real) module created for your needs.
 version_added: "1.0.0"
 options:
@@ -34,10 +29,10 @@ options:
         configured provider. The resulting output from the command
         is returned. If the I(wait_for) argument is provided, the
         module is not returned until the condition is satisfied or
-        the number of retries as expired.
+        the number of retries has expired.
       - Only C(tmsh) commands are supported. If you are piping or adding additional
         logic that is outside of C(tmsh) (such as grep'ing, awk'ing or other shell
-        related things that are not C(tmsh), this behavior is not supported.
+        related logic that are not C(tmsh)), this behavior is not supported.
     required: True
     type: raw
   wait_for:
@@ -46,7 +41,7 @@ options:
         and what conditionals to apply.  This argument will cause
         the task to wait for a particular conditional to be true
         before moving forward. If the conditional is not true
-        by the configured retries, the task fails. See examples.
+        by the configured retries, the task fails. See the examples.
     type: list
     elements: str
     aliases: ['waitfor']
@@ -54,7 +49,7 @@ options:
     description:
       - The I(match) argument is used in conjunction with the
         I(wait_for) argument to specify the match policy. Valid
-        values are C(all) or C(any). If the value is set to C(all)
+        values are C(all) or C(any). If the value is set to C(all),
         then all conditionals in the I(wait_for) must be satisfied. If
         the value is set to C(any) then only one of the values must be
         satisfied.
@@ -65,7 +60,7 @@ options:
     default: all
   retries:
     description:
-      - Specifies the number of retries a command should by tried
+      - Specifies the number of retries a command should be tried
         before it is considered failed. The command is run on the
         target device every retry and evaluated against the I(wait_for)
         conditionals.
@@ -93,7 +88,7 @@ options:
       - Change into this directory before running the command.
     type: str
 notes:
-  - When running this module in an HA environment, via SSH connection and using a role other than C(admin)
+  - When running this module in an HA environment via SSH connection and using a role other than C(admin)
     or C(root), you may see a C(Change Pending) status, even if you did not make any changes.
     This is being tracked with ID429869.
 extends_documentation_fragment: f5networks.f5_modules.f5_rest_cli
@@ -198,24 +193,15 @@ warn:
 import copy
 import re
 import time
+from datetime import datetime
 
 from ansible.module_utils.basic import AnsibleModule
 from ansible.module_utils.six import string_types
 
-try:
-    from ansible_collections.ansible.netcommon.plugins.module_utils.network.common.parsing import (
-        FailedConditionsError, Conditional
-    )
-    from ansible_collections.ansible.netcommon.plugins.module_utils.network.common.utils import (
-        ComplexList, to_list
-    )
-except ImportError:
-    from ansible.module_utils.network.common.parsing import (
-        FailedConditionsError, Conditional
-    )
-    from ansible.module_utils.network.common.utils import (
-        ComplexList, to_list
-    )
+from ansible_collections.ansible.netcommon.plugins.module_utils.network.common.parsing import Conditional
+from ansible_collections.ansible.netcommon.plugins.module_utils.network.common.utils import (
+    ComplexList, to_list
+)
 
 from collections import deque
 
@@ -223,9 +209,11 @@ from ..module_utils.bigip import F5RestClient
 from ..module_utils.common import (
     F5ModuleError, AnsibleF5Parameters, f5_argument_spec, is_cli
 )
+from ..module_utils.icontrol import tmos_version
+from ..module_utils.teem import send_teem
 
 try:
-    from .module_utils.common import run_commands
+    from ..module_utils.common import run_commands
     HAS_CLI_TRANSPORT = True
 except ImportError:
     HAS_CLI_TRANSPORT = False
@@ -423,16 +411,6 @@ class BaseManager(object):
             lines.append(item)
         return lines
 
-    def exec_module(self):
-        result = dict()
-
-        changed = self.execute()
-
-        result.update(**self.changes.to_return())
-        result.update(dict(changed=changed))
-        self._announce_warnings(result)
-        return result
-
     def _announce_warnings(self, result):
         warnings = result.pop('warnings', [])
         for warning in warnings:
@@ -512,8 +490,8 @@ class BaseManager(object):
             retries -= 1
         else:
             failed_conditions = [item.raw for item in conditionals]
-            errmsg = 'One or more conditional statements have not been satisfied.'
-            raise FailedConditionsError(errmsg, failed_conditions)
+            errmsg = 'The following wait_for conditional statements have not been satisfied.'
+            raise F5ModuleError(errmsg, failed_conditions)
         stdout_lines = self._to_lines(responses)
         changes = {
             'stdout': responses,
@@ -586,6 +564,18 @@ class V1Manager(BaseManager):
             raise
         return False
 
+    def exec_module(self):
+        start = datetime.now().isoformat()
+        result = dict()
+
+        changed = self.execute()
+
+        result.update(**self.changes.to_return())
+        result.update(dict(changed=changed))
+        self._announce_warnings(result)
+        send_teem(start, self.module, None)
+        return result
+
     def execute(self):
         self.want.update({'is_tmsh': self.is_tmsh()})
         return super(V1Manager, self).execute()
@@ -605,6 +595,19 @@ class V2Manager(BaseManager):
     @property
     def commands(self):
         return self.want.rest_commands
+
+    def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
+        result = dict()
+
+        changed = self.execute()
+
+        result.update(**self.changes.to_return())
+        result.update(dict(changed=changed))
+        self._announce_warnings(result)
+        send_teem(start, self.module, version)
+        return result
 
     def execute_on_device(self, commands):
         responses = []

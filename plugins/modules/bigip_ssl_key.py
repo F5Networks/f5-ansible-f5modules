@@ -7,17 +7,12 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['stableinterface'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_ssl_key
 short_description: Import/Delete SSL keys from BIG-IP
 description:
-  - This module will import/delete SSL keys on a BIG-IP. Keys can be imported
+  - This module imports/deletes SSL keys on a BIG-IP. Keys can be imported
     from key files on the local disk, in PEM format.
 version_added: "1.0.0"
 options:
@@ -31,9 +26,9 @@ options:
       - key_content
   state:
     description:
-      - When C(present), ensures that the key is uploaded to the device. When
-        C(absent), ensures that the key is removed from the device. If the key
-        is currently in use, the module will not be able to remove the key.
+      - When C(present), ensures the key is uploaded to the device. When
+        C(absent), ensures the key is removed from the device. If the key
+        is currently in use, the module is not able to remove the key.
     type: str
     choices:
       - present
@@ -55,7 +50,7 @@ options:
     default: Common
 notes:
   - This module does not behave like other modules that you might include in
-    roles where referencing files or templates first looks in the role's
+    roles, where referencing files or templates first looks in the role's
     files or templates directory. To have it behave that way, use the Ansible
     file or template lookup (see Examples). The lookups behave as expected in
     a role context.
@@ -100,12 +95,12 @@ key_filename:
   type: str
   sample: cert1.key
 key_checksum:
-  description: SHA1 checksum of the key that was provided.
+  description: SHA1 checksum of the key.
   returned: changed and created
   type: str
   sample: cf23df2207d99a74fbe169e3eba035e633b65d94
 key_source_path:
-  description: Path on BIG-IP where the source of the key is stored
+  description: Path on BIG-IP where the source of the key is stored.
   returned: created
   type: str
   sample: /var/config/rest/downloads/cert1.key
@@ -114,6 +109,7 @@ key_source_path:
 import hashlib
 import os
 import re
+from datetime import datetime
 
 from ansible.module_utils.basic import (
     AnsibleModule, env_fallback
@@ -123,7 +119,10 @@ from ..module_utils.bigip import F5RestClient
 from ..module_utils.common import (
     F5ModuleError, AnsibleF5Parameters, transform_name, f5_argument_spec
 )
-from ..module_utils.icontrol import upload_file
+from ..module_utils.icontrol import (
+    upload_file, tmos_version
+)
+from ..module_utils.teem import send_teem
 
 try:
     from StringIO import StringIO
@@ -209,7 +208,7 @@ class Changes(Parameters):
                 result[returnable] = getattr(self, returnable)
             result = self._filter_params(result)
         except Exception:
-            pass
+            raise
         return result
 
 
@@ -303,6 +302,8 @@ class ModuleManager(object):
         return False
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         changed = False
         result = dict()
         state = self.want.state
@@ -317,6 +318,7 @@ class ModuleManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, version)
         return result
 
     def present(self):
@@ -337,6 +339,7 @@ class ModuleManager(object):
         if self.module.check_mode:
             return True
         self.update_on_device()
+        self.remove_uploaded_file_from_device(self.want.key_filename)
         return True
 
     def should_update(self):
@@ -352,6 +355,7 @@ class ModuleManager(object):
         if self.module.check_mode:
             return True
         self.create_on_device()
+        self.remove_uploaded_file_from_device(self.want.key_filename)
         return True
 
     def remove(self):
@@ -361,6 +365,25 @@ class ModuleManager(object):
         if self.exists():
             raise F5ModuleError("Failed to delete the key")
         return True
+
+    def remove_uploaded_file_from_device(self, name):
+        filepath = '/var/config/rest/downloads/{0}'.format(name)
+        params = {
+            "command": "run",
+            "utilCmdArgs": filepath
+        }
+        uri = "https://{0}:{1}/mgmt/tm/util/unix-rm".format(
+            self.client.provider['server'],
+            self.client.provider['server_port']
+        )
+        resp = self.client.api.post(uri, json=params)
+        try:
+            response = resp.json()
+        except ValueError as ex:
+            raise F5ModuleError(str(ex))
+        if resp.status in [200, 201] or 'code' in response and response['code'] in [200, 201]:
+            return True
+        raise F5ModuleError(resp.content)
 
     def exists(self):
         uri = "https://{0}:{1}/mgmt/tm/sys/file/ssl-key/{2}".format(
@@ -414,11 +437,10 @@ class ModuleManager(object):
         except ValueError as ex:
             raise F5ModuleError(str(ex))
 
-        if 'code' in response and response['code'] == 400:
-            if 'message' in response:
-                raise F5ModuleError(response['message'])
-            else:
-                raise F5ModuleError(resp.content)
+        if resp.status in [200, 201] or 'code' in response and response['code'] in [200, 201]:
+            return True
+
+        raise F5ModuleError(resp.content)
 
     def create_on_device(self):
         params = self.changes.api_params()
@@ -436,11 +458,10 @@ class ModuleManager(object):
         except ValueError as ex:
             raise F5ModuleError(str(ex))
 
-        if 'code' in response and response['code'] in [400, 403]:
-            if 'message' in response:
-                raise F5ModuleError(response['message'])
-            else:
-                raise F5ModuleError(resp.content)
+        if resp.status in [200, 201] or 'code' in response and response['code'] in [200, 201]:
+            return True
+
+        raise F5ModuleError(resp.content)
 
     def read_current_from_device(self):
         uri = "https://{0}:{1}/mgmt/tm/sys/file/ssl-key/{2}".format(
@@ -454,12 +475,9 @@ class ModuleManager(object):
         except ValueError as ex:
             raise F5ModuleError(str(ex))
 
-        if 'code' in response and response['code'] == 400:
-            if 'message' in response:
-                raise F5ModuleError(response['message'])
-            else:
-                raise F5ModuleError(resp.content)
-        return ApiParameters(params=response)
+        if resp.status in [200, 201] or 'code' in response and response['code'] in [200, 201]:
+            return ApiParameters(params=response)
+        raise F5ModuleError(resp.content)
 
     def remove_from_device(self):
         uri = "https://{0}:{1}/mgmt/tm/sys/file/ssl-key/{2}".format(

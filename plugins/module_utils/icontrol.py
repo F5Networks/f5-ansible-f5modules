@@ -88,6 +88,10 @@ print(resp.json())
 
 from ansible.module_utils.six.moves.urllib.error import HTTPError
 
+from .constants import (
+    LOGOUT, BASE_HEADERS
+)
+
 
 class Response(object):
     def __init__(self):
@@ -177,7 +181,7 @@ class iControlRestSession(object):
         json = kwargs.pop('json', None)
 
         if not data and json is not None:
-            self.request.headers['Content-Type'] = 'application/json'
+            self.request.headers.update(BASE_HEADERS)
             body = _json.dumps(json)
             if not isinstance(body, bytes):
                 body = body.encode('utf-8')
@@ -245,8 +249,8 @@ class iControlRestSession(object):
             return
         try:
             p = generic_urlparse(urlparse(self.last_url))
-            uri = "https://{0}:{1}/mgmt/shared/authz/tokens/{2}".format(
-                p['hostname'], p['port'], token
+            uri = "https://{0}:{1}{2}{3}".format(
+                p['hostname'], p['port'], LOGOUT, token
             )
             self.delete(uri)
         except ValueError:
@@ -293,43 +297,64 @@ class TransactionContextManager(object):
                 raise Exception
 
 
-def download_asm_file(client, url, dest):
-    """Download an ASM file from the remote device
+def download_asm_file(client, url, dest, file_size):
+    """Download a large ASM file from the remote device
 
     This method handles issues with ASM file endpoints that allow
-    downloads of ASM objects on the BIG-IP.
+    downloads of ASM objects on the BIG-IP, as well as handles
+    chunking of large files.
 
     Arguments:
         client (object): The F5RestClient connection object.
         url (string): The URL to download.
         dest (string): The location on (Ansible controller) disk to store the file.
+        file_size (integer): The size of the remote file.
 
     Returns:
-        bool: True on success. False otherwise.
+        bool: No response on success. Fail otherwise.
     """
 
     with open(dest, 'wb') as fileobj:
-        headers = {
-            'Content-Type': 'application/json'
-        }
-        data = {'headers': headers,
-                'verify': False
-                }
+        chunk_size = 512 * 1024
+        start = 0
+        end = chunk_size - 1
+        size = file_size
+        # current_bytes = 0
 
-        response = client.api.get(url, headers=headers, json=data)
-        if response.status == 200:
-            if 'Content-Length' not in response.headers:
-                error_message = "The Content-Length header is not present."
-                raise F5ModuleError(error_message)
+        while True:
+            content_range = "%s-%s/%s" % (start, end, size)
+            headers = {
+                'Content-Range': content_range,
+                'Content-Type': 'application/json'
+            }
+            data = {
+                'headers': headers,
+                'verify': False,
+                'stream': False
+            }
 
-            length = response.headers['Content-Length']
-
-            if int(length) > 0:
-                fileobj.write(response.content)
+            response = client.api.get(url, headers=headers, json=data)
+            if response.status == 200:
+                if 'Content-Length' not in response.headers:
+                    error_message = "The Content-Length header is not present."
+                    raise F5ModuleError(error_message)
+                length = response.headers['Content-Length']
+                if int(length) > 0:
+                    fileobj.write(response.content)
+                else:
+                    error = "Invalid Content-Length value returned: %s ," \
+                            "the value should be greater than 0" % length
+                    raise F5ModuleError(error)
+                # fileobj.write(response.raw_content)
+            if end == size:
+                break
+            start += chunk_size
+            if start >= size:
+                break
+            if (end + chunk_size) > size:
+                end = size - 1
             else:
-                error = "Invalid Content-Length value returned: %s ," \
-                        "the value should be greater than 0" % length
-                raise F5ModuleError(error)
+                end = start + chunk_size - 1
 
 
 def download_file(client, url, dest):
@@ -506,8 +531,8 @@ def upload_file(client, url, src, dest=None):
                 # POSTed. This is almost always unreadable because it is a series
                 # of bytes.
                 #
-                # Therefore, including an empty exception here.
-                raise F5ModuleError()
+                # Therefore, we only inform on the returned HTTP error code.
+                raise F5ModuleError('Error during upload, http error code: {0}'.format(str(response.status)))
             start += current_bytes
         except F5ModuleError:
             # You must seek back to the beginning of the file upon exception.
@@ -567,7 +592,7 @@ def bigiq_version(client):
         return version
 
     raise F5ModuleError(
-        'Failed to retrieve BIGIQ version information.'
+        'Failed to retrieve BIG-IQ version information.'
     )
 
 

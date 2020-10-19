@@ -7,17 +7,12 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['stableinterface'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_profile_http_compression
 short_description: Manage HTTP compression profiles on a BIG-IP
 description:
-  - Manage HTTP compression profiles on a BIG-IP.
+  - Manage HTTP compression profiles on a BIG-IP device.
 version_added: "1.0.0"
 options:
   name:
@@ -37,7 +32,7 @@ options:
     type: str
   buffer_size:
     description:
-      - Maximum number of compressed bytes that the system buffers before inserting
+      - Maximum number of compressed bytes the system buffers before inserting
         a Content-Length header (which specifies the compressed size) into the response.
       - When creating a new profile, if this parameter is not specified, the default
         is provided by the parent profile.
@@ -61,7 +56,7 @@ options:
       - 9
   gzip_memory_level:
     description:
-      - Number of kilobytes of memory that the system uses for internal compression
+      - Number of kilobytes of memory the system uses for internal compression
         buffers when compressing a server response.
     type: int
     choices:
@@ -76,7 +71,7 @@ options:
       - 256
   gzip_window_size:
     description:
-      - Number of kilobytes in the window size that the system uses when compressing
+      - Number of kilobytes in the window size the system uses when compressing
         a server response.
     type: int
     choices:
@@ -95,7 +90,7 @@ options:
     default: Common
   state:
     description:
-      - When C(present), ensures that the profile exists.
+      - When C(present), ensures the profile exists.
       - When C(absent), ensures the profile is removed.
     type: str
     choices:
@@ -135,7 +130,7 @@ buffer_size:
   type: int
   sample: 4096
 gzip_memory_level:
-  description: The new GZIP memory level, in KB, of the profile.
+  description: The new GZIP memory level of the profile, in KB.
   returned: changed
   type: int
   sample: 16
@@ -145,11 +140,12 @@ gzip_level:
   type: int
   sample: 2
 gzip_window_size:
-  description: The new GZIP window size, in KB, of the profile.
+  description: The new GZIP window size of the profile, in KB.
   returned: changed
   type: int
   sample: 64
 '''
+from datetime import datetime
 
 from ansible.module_utils.basic import (
     AnsibleModule, env_fallback
@@ -159,6 +155,8 @@ from ..module_utils.bigip import F5RestClient
 from ..module_utils.common import (
     F5ModuleError, AnsibleF5Parameters, transform_name, f5_argument_spec, fq_name
 )
+from ..module_utils.icontrol import tmos_version
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -329,6 +327,8 @@ class ModuleManager(object):
         return False
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         changed = False
         result = dict()
         state = self.want.state
@@ -343,6 +343,7 @@ class ModuleManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, version)
         return result
 
     def _announce_deprecations(self, result):

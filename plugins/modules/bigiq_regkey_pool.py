@@ -7,27 +7,22 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['preview'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigiq_regkey_pool
 short_description: Manages registration key pools on BIG-IQ
 description:
   - Manages registration key (regkey) pools on a BIG-IQ. These pools function as
-    a container in-which you will add lists of registration keys. To add registration
+    a container in which you add lists of registration keys. To add registration
     keys, use the C(bigiq_regkey_license) module.
 version_added: "1.0.0"
 options:
   name:
     description:
       - Specifies the name of the registration key pool.
-      - You must be mindful to name your registration pools unique names. While
-        BIG-IQ does not require this, this module does. If you do not do this,
-        the behavior of the module is undefined and you may end up putting
+      - You must name your registration pools unique names. While
+        BIG-IQ does not require this, this module does. If you do not,
+        the behavior of the module is undefined, and you may end up putting
         licenses in the wrong registration key pool.
     type: str
     required: True
@@ -38,7 +33,7 @@ options:
   state:
     description:
       - The state of the regkey pool on the system.
-      - When C(present), guarantees that the pool exists.
+      - When C(present), guarantees the pool exists.
       - When C(absent), removes the pool, and the licenses it contains, from the
         system.
     type: str
@@ -72,6 +67,7 @@ description:
   type: str
   sample: My description
 '''
+from datetime import datetime
 
 from ansible.module_utils.basic import AnsibleModule
 
@@ -79,6 +75,8 @@ from ..module_utils.bigip import F5RestClient
 from ..module_utils.common import (
     F5ModuleError, AnsibleF5Parameters, f5_argument_spec
 )
+from ..module_utils.icontrol import bigiq_version
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -233,6 +231,8 @@ class ModuleManager(object):
         return False
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = bigiq_version(self.client)
         changed = False
         result = dict()
         state = self.want.state
@@ -247,6 +247,7 @@ class ModuleManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, version)
         return result
 
     def _announce_deprecations(self, result):

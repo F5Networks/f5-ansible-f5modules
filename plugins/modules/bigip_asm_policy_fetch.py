@@ -7,17 +7,12 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['stableinterface'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_asm_policy_fetch
-short_description: Exports the asm policy from remote nodes.
+short_description: Exports the ASM policy from remote nodes.
 description:
-  - Exports the asm policy from remote nodes.
+  - Exports the ASM policy from remote nodes.
 version_added: "1.0.0"
 options:
   name:
@@ -32,13 +27,13 @@ options:
     type: path
   file:
     description:
-      - The name of the file to be create on the remote device for downloading.
+      - The name of the file to be created on the remote device for downloading.
       - When C(binary) is set to C(no) the ASM policy will be in XML format.
     type: str
   inline:
     description:
       - If C(yes), the ASM policy will be exported C(inline) as a string instead of a file.
-      - The policy can be be retrieved in playbook C(result) dictionary under C(inline_policy) key.
+      - The policy can be be retrieved in the playbook C(result) dictionary under the C(inline_policy) key.
     type: bool
   compact:
     description:
@@ -62,12 +57,13 @@ options:
     type: bool
   partition:
     description:
-      - Device partition which contains ASM policy to export.
+      - Device partition which contains the ASM policy to export.
     type: str
     default: Common
 extends_documentation_fragment: f5networks.f5_modules.f5
 author:
   - Wojciech Wypior (@wojtek0806)
+  - Nitin Khanna (@nitinthewiz)
 '''
 
 EXAMPLES = r'''
@@ -136,7 +132,7 @@ name:
   type: str
   sample: Asm_APP1_Transparent
 dest:
-  description: Local path to download exported ASM policy.
+  description: Local path to download the exported ASM policy.
   returned: changed
   type: str
   sample: /root/downloads/foobar.xml
@@ -148,7 +144,7 @@ file:
   type: str
   sample: foobar.xml
 inline:
-  description: Set when ASM policy to be exported inline
+  description: Set when the ASM policy to be exported is inline
   returned: changed
   type: bool
   sample: yes
@@ -158,12 +154,12 @@ compact:
   type: bool
   sample: no
 base64:
-  description: Set to encode inline export in base64 format.
+  description: Set to encode inline export in Base64 format.
   returned: changed
   type: bool
   sample: no
 binary:
-  description: Set to export ASM policy in binary format.
+  description: Set to export the ASM policy in binary format.
   returned: changed
   type: bool
   sample: yes
@@ -172,6 +168,7 @@ binary:
 import os
 import time
 import tempfile
+from datetime import datetime
 
 from ansible.module_utils.basic import (
     AnsibleModule, env_fallback
@@ -181,8 +178,9 @@ from ..module_utils.common import (
     F5ModuleError, AnsibleF5Parameters, f5_argument_spec, flatten_boolean, fq_name
 )
 from ..module_utils.icontrol import (
-    module_provisioned, download_asm_file
+    module_provisioned, download_asm_file, tmos_version
 )
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -360,6 +358,8 @@ class ModuleManager(object):
             )
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         if not module_provisioned(self.client, 'asm'):
             raise F5ModuleError(
                 "ASM must be provisioned to use this module."
@@ -372,6 +372,7 @@ class ModuleManager(object):
         changes = reportable.to_return()
         result.update(**changes)
         result.update(dict(changed=True))
+        send_teem(start, self.module, version)
         return result
 
     def export(self):
@@ -440,11 +441,12 @@ class ModuleManager(object):
         if resp.status not in [200, 201] or 'code' in response and response['code'] not in [200, 201]:
             raise F5ModuleError(resp.content)
 
-        result, output = self.wait_for_task(response['id'])
+        result, output, file_size = self.wait_for_task(response['id'])
         if result and output:
             if 'file' in output:
                 self.changes.update(dict(inline_policy=output['file']))
         if result:
+            self.want.file_size = file_size
             return True
 
     def wait_for_task(self, task_id):
@@ -474,9 +476,9 @@ class ModuleManager(object):
             )
         if response['status'] == 'COMPLETED':
             if not self.want.inline:
-                return True, None
+                return True, None, response['result']['fileSize']
             else:
-                return True, response['result']
+                return True, response['result'], response['result']['fileSize']
 
     def _set_policy_link(self):
         policy_link = None
@@ -568,7 +570,7 @@ class ModuleManager(object):
             self.want.file
         )
         try:
-            download_asm_file(self.client, url, dest)
+            download_asm_file(self.client, url, dest, self.want.file_size)
         except F5ModuleError:
             raise F5ModuleError(
                 "Failed to download the file."

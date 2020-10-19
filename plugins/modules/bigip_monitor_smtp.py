@@ -7,11 +7,6 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['preview'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_monitor_smtp
@@ -55,15 +50,13 @@ options:
   ip:
     description:
       - IP address part of the IP/port definition. If this parameter is not
-        provided when creating a new monitor, then the default value will be
-        '*'.
+        provided when creating a new monitor, the default value is '*'.
     type: str
   port:
     description:
       - Port address part of the IP/port definition. If this parameter is not
-        provided when creating a new monitor, then the default value will be
-        '*'. Note that if specifying an IP address, a value between 1 and 65535
-        must be specified.
+        provided when creating a new monitor, the default value is '*'.
+        If specifying an IP address, you must specify a value between 1 and 65535.
     type: str
   interval:
     description:
@@ -77,9 +70,9 @@ options:
     description:
       - Specifies the interval for the system to use to perform the health check
         when a resource is up.
-      - When C(0), specifies that the system uses the interval specified in
+      - When C(0), specifies the system uses the interval specified in
         C(interval) to check the health of the resource.
-      - When any other number, enables specification of a different interval to
+      - When any other number, enables you to specify a different interval to
         use when checking the health of a resource that is up.
       - When creating a new monitor, if this parameter is not provided, the
         default C(0) will be used.
@@ -90,9 +83,9 @@ options:
         the monitor request.
       - If the target responds within the set time period, it is considered up.
       - If the target does not respond within the set time period, it is considered down.
-      - You can change this number to any number you want, however, it should be 3 times the
+      - You can change this to any number, however, it should be 3 times the
         interval number of seconds plus 1 second.
-      - If this parameter is not provided when creating a new monitor, then the default
+      - If this parameter is not provided when creating a new monitor, the default
         value will be C(31).
     type: int
   manual_resume:
@@ -103,16 +96,16 @@ options:
         before the system can use it for load balancing connections.
       - When creating a new monitor, if this parameter is not specified, the default
         value is C(no).
-      - When C(yes), specifies that you must manually re-enable the resource after an
+      - When C(yes), specifies you must manually re-enable the resource after an
         unsuccessful monitor check.
-      - When C(no), specifies that the system automatically changes the status of a
+      - When C(no), specifies the system automatically changes the status of a
         resource to B(enabled) at the next successful monitor check.
     type: bool
   time_until_up:
     description:
       - Specifies the amount of time in seconds after the first successful
         response before a node will be marked up.
-      - A value of 0 will cause a node to be marked up immediately after a valid
+      - A value of C(0) will cause a node to be marked up immediately after a valid
         response is received from the node.
       - If this parameter is not provided when creating a new monitor, then the default
         value will be C(0).
@@ -124,7 +117,7 @@ options:
     default: Common
   state:
     description:
-      - When C(present), ensures that the monitor exists.
+      - When C(present), ensures the monitor exists.
       - When C(absent), ensures the monitor is removed.
     type: str
     choices:
@@ -228,6 +221,7 @@ time_until_up:
   type: int
   sample: 2
 '''
+from datetime import datetime
 
 from ansible.module_utils.basic import (
     AnsibleModule, env_fallback
@@ -239,6 +233,8 @@ from ..module_utils.common import (
 )
 from ..module_utils.compare import cmp_str_with_none
 from ..module_utils.ipaddress import is_valid_ip
+from ..module_utils.icontrol import tmos_version
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -574,6 +570,8 @@ class ModuleManager(object):
             )
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         changed = False
         result = dict()
         state = self.want.state
@@ -588,6 +586,7 @@ class ModuleManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, version)
         return result
 
     def present(self):

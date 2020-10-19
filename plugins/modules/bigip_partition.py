@@ -7,32 +7,27 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['stableinterface'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_partition
 short_description: Manage BIG-IP partitions
 description:
-  - Manage BIG-IP partitions.
+  - Manage partitions on the BIG-IP.
 version_added: "1.0.0"
 options:
   name:
     description:
-      - Name of the partition
+      - Name of the partition.
     type: str
     required: True
   description:
     description:
-      - The description to attach to the Partition.
+      - The description to attach to the partition.
     type: str
   route_domain:
     description:
-      - The default Route Domain to assign to the Partition. If no route domain
-        is specified, then the default route domain for the system (typically
+      - The default Route Domain to assign to the partition. If no route domain
+        is specified, the default route domain for the system (typically
         zero) will be used only when creating a new partition.
     type: int
   state:
@@ -114,6 +109,7 @@ description:
   type: str
   sample: Example partition
 '''
+from datetime import datetime
 
 from ansible.module_utils.basic import AnsibleModule
 
@@ -122,6 +118,8 @@ from ..module_utils.common import (
     F5ModuleError, AnsibleF5Parameters, f5_argument_spec
 )
 from ..module_utils.compare import cmp_str_with_none
+from ..module_utils.icontrol import tmos_version
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -269,6 +267,8 @@ class ModuleManager(object):
         return False
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         changed = False
         result = dict()
         state = self.want.state
@@ -283,6 +283,7 @@ class ModuleManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, version)
         return result
 
     def present(self):

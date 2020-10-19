@@ -7,17 +7,12 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['stableinterface'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_gtm_topology_record
 short_description: Manages GTM Topology Records
 description:
-  - Manages GTM Topology Records. Once created, only topology record C(weight) can be modified.
+  - Manages GTM (now BIG-IP DNS) Topology Records. Once created, only topology record C(weight) can be modified.
 version_added: "1.0.0"
 options:
   source:
@@ -54,7 +49,7 @@ options:
       state:
         description:
           - Specifies a state in a given country.
-          - This parameter requires country option to be provided.
+          - This parameter requires the C(country) option.
         type: str
       isp:
         description:
@@ -75,7 +70,7 @@ options:
           - ShanghaiTelecom
       geo_isp:
         description:
-          - Specifies a geolocation ISP
+          - Specifies a geolocation ISP.
         type: str
     type: dict
     required: True
@@ -85,7 +80,7 @@ options:
     suboptions:
       negate:
         description:
-          - When set to c(yes) the system selects this topology record, when the request destination does not match.
+          - When set to C(yes) the system selects this topology record, when the request destination does not match.
         type: bool
         default: no
       subnet:
@@ -111,7 +106,7 @@ options:
       state:
         description:
           - Specifies a state in a given country.
-          - This parameter requires country option to be provided.
+          - This parameter requires the C(country) option.
         type: str
       pool:
         description:
@@ -159,13 +154,13 @@ options:
     description:
       - Device partition to manage resources on.
       - Partition parameter is taken into account when used in conjunction with C(pool), C(data_center),
-        and C(region) parameters, it is ignored otherwise.
+        and C(region) parameters, otherwise it is ignored.
     type: str
     default: Common
   state:
     description:
-      - When C(state) is C(present), ensures that the record exists.
-      - When C(state) is C(absent), ensures that the record is removed.
+      - When C(state) is C(present), ensures the record exists.
+      - When C(state) is C(absent), ensures the record is removed.
     type: str
     choices:
       - present
@@ -225,7 +220,7 @@ weight:
   type: int
   sample: 20
 '''
-
+from datetime import datetime
 from ansible.module_utils.basic import (
     AnsibleModule, env_fallback
 )
@@ -236,6 +231,8 @@ from ..module_utils.common import (
     F5ModuleError, AnsibleF5Parameters, f5_argument_spec, flatten_boolean, fq_name
 )
 from ..module_utils.ipaddress import is_valid_ip_network
+from ..module_utils.icontrol import tmos_version
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -828,6 +825,8 @@ class ModuleManager(object):
         return False
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         changed = False
         result = dict()
         state = self.want.state
@@ -842,6 +841,7 @@ class ModuleManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, version)
         return result
 
     def _announce_deprecations(self, result):

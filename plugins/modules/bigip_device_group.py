@@ -7,11 +7,6 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['stableinterface'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_device_group
@@ -19,7 +14,7 @@ short_description: Manage device groups on a BIG-IP
 description:
   - Managing device groups allows you to create HA pairs and clusters
     of BIG-IP devices. Usage of this module should be done in conjunction
-    with the C(bigip_configsync_actions) to sync configuration across
+    with the C(bigip_configsync_actions) to sync the configuration across
     the pair or cluster if auto-sync is disabled.
 version_added: "1.0.0"
 options:
@@ -30,7 +25,7 @@ options:
     required: True
   type:
     description:
-      - Specifies that the type of group.
+      - Specifies the type of group.
       - A C(sync-failover) device group contains devices that synchronize their
         configuration data and fail over to one another when a device becomes
         unavailable.
@@ -85,7 +80,7 @@ options:
   state:
     description:
       - When C(state) is C(present), ensures the device group exists.
-      - When C(state) is C(absent), ensures that the device group is removed.
+      - When C(state) is C(absent), ensures  the device group is removed.
     type: str
     choices:
       - present
@@ -94,7 +89,7 @@ options:
   network_failover:
     description:
       - Indicates whether failover occurs over the network or is hard-wired.
-      - This parameter is only valid for C(type)'s that are C(sync-failover).
+      - This parameter is only valid for C(type)s that are C(sync-failover).
     type: bool
 notes:
   - This module is primarily used as a component of configuring HA pairs of
@@ -154,7 +149,7 @@ auto_sync:
   type: bool
   sample: true
 max_incremental_sync_size:
-  description: The new sync size of the device group
+  description: The new sync size of the device group.
   returned: changed
   type: int
   sample: 1000
@@ -164,7 +159,7 @@ network_failover:
   type: bool
   sample: yes
 '''
-
+from datetime import datetime
 from ansible.module_utils.basic import AnsibleModule
 from ansible.module_utils.parsing.convert_bool import BOOLEANS_TRUE
 
@@ -172,6 +167,8 @@ from ..module_utils.bigip import F5RestClient
 from ..module_utils.common import (
     F5ModuleError, AnsibleF5Parameters, f5_argument_spec
 )
+from ..module_utils.icontrol import tmos_version
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -391,6 +388,8 @@ class ModuleManager(object):
             )
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         changed = False
         result = dict()
         state = self.want.state
@@ -405,6 +404,7 @@ class ModuleManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, version)
         return result
 
     def present(self):

@@ -20,7 +20,7 @@ from ansible_collections.f5networks.f5_modules.plugins.modules.bigip_virtual_add
     ApiParameters, ModuleParameters, ModuleManager, ArgumentSpec
 )
 from ansible_collections.f5networks.f5_modules.tests.unit.compat import unittest
-from ansible_collections.f5networks.f5_modules.tests.unit.compat.mock import Mock
+from ansible_collections.f5networks.f5_modules.tests.unit.compat.mock import Mock, patch
 from ansible_collections.f5networks.f5_modules.tests.unit.modules.utils import set_module_args
 
 
@@ -53,7 +53,7 @@ class TestParameters(unittest.TestCase):
             address='1.1.1.1',
             netmask='2.2.2.2',
             connection_limit='10',
-            arp_state='enabled',
+            arp='enabled',
             auto_delete='enabled',
             icmp_echo='enabled',
             availability_calculation='always',
@@ -63,8 +63,8 @@ class TestParameters(unittest.TestCase):
         assert p.address == '1.1.1.1'
         assert p.netmask == '2.2.2.2'
         assert p.connection_limit == 10
-        assert p.arp is True
-        assert p.auto_delete is True
+        assert p.arp == 'enabled'
+        assert p.auto_delete == 'true'
         assert p.icmp_echo == 'enabled'
         assert p.availability_calculation == 'none'
 
@@ -73,8 +73,8 @@ class TestParameters(unittest.TestCase):
         p = ApiParameters(params=args)
         assert p.name == '1.1.1.1'
         assert p.address == '1.1.1.1'
-        assert p.arp is True
-        assert p.auto_delete is True
+        assert p.arp == 'enabled'
+        assert p.auto_delete == 'true'
         assert p.connection_limit == 0
         assert p.state == 'enabled'
         assert p.icmp_echo == 'enabled'
@@ -115,14 +115,14 @@ class TestParameters(unittest.TestCase):
             auto_delete='disabled'
         )
         p = ModuleParameters(params=args)
-        assert p.auto_delete is False
+        assert p.auto_delete == 'false'
 
-    def test_module_parameters_arp_state_disabled(self):
+    def test_module_parameters_arp_disabled(self):
         args = dict(
-            arp_state='disabled'
+            arp='disabled'
         )
         p = ModuleParameters(params=args)
-        assert p.arp_state == 'disabled'
+        assert p.arp == 'disabled'
 
     def test_module_parameters_state_present(self):
         args = dict(
@@ -157,9 +157,18 @@ class TestParameters(unittest.TestCase):
 
 
 class TestManager(unittest.TestCase):
-
     def setUp(self):
         self.spec = ArgumentSpec()
+        self.p2 = patch('ansible_collections.f5networks.f5_modules.plugins.modules.bigip_virtual_address.tmos_version')
+        self.p3 = patch('ansible_collections.f5networks.f5_modules.plugins.modules.bigip_virtual_address.send_teem')
+        self.m2 = self.p2.start()
+        self.m2.return_value = '14.1.0'
+        self.m3 = self.p3.start()
+        self.m3.return_value = True
+
+    def tearDown(self):
+        self.p2.stop()
+        self.p3.stop()
 
     def test_create_virtual_address(self, *args):
         set_module_args(dict(
@@ -167,8 +176,8 @@ class TestManager(unittest.TestCase):
             address='1.1.1.1',
             netmask='2.2.2.2',
             connection_limit='10',
-            arp_state='enabled',
-            auto_delete='enabled',
+            arp='yes',
+            auto_delete='yes',
             icmp_echo='enabled',
             advertise_route='always',
             provider=dict(
@@ -181,7 +190,6 @@ class TestManager(unittest.TestCase):
         module = AnsibleModule(
             argument_spec=self.spec.argument_spec,
             supports_check_mode=self.spec.supports_check_mode,
-            mutually_exclusive=self.spec.mutually_exclusive,
             required_one_of=self.spec.required_one_of
         )
         mm = ModuleManager(module=module)
@@ -207,7 +215,6 @@ class TestManager(unittest.TestCase):
         module = AnsibleModule(
             argument_spec=self.spec.argument_spec,
             supports_check_mode=self.spec.supports_check_mode,
-            mutually_exclusive=self.spec.mutually_exclusive,
             required_one_of=self.spec.required_one_of
         )
         mm = ModuleManager(module=module)

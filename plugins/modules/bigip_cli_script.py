@@ -7,18 +7,13 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['stableinterface'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_cli_script
 short_description: Manage CLI scripts on a BIG-IP
 description:
   - Manages CLI scripts on a BIG-IP. CLI scripts, otherwise known as tmshell scripts
-    or TMSH scripts allow you to create custom scripts that can run to manage objects
+    or TMSH scripts, allow you to create custom scripts that can run to manage objects
     within a BIG-IP.
 version_added: "1.0.0"
 options:
@@ -30,9 +25,8 @@ options:
   content:
     description:
       - The content of the script.
-      - This parameter is typically used in conjunction with Ansible's C(file), or
-        template lookup plugins. If this sounds foreign to you, see the examples
-        in this documentation.
+      - This parameter is typically used in conjunction with Ansible's C(file) or
+        template lookup plugins. See the examples in this documentation.
     type: str
   description:
     description:
@@ -40,12 +34,12 @@ options:
     type: str
   partition:
     description:
-      - Device partition to manage resources on.
+      - Device partition on which to manage resources.
     type: str
     default: Common
   state:
     description:
-      - When C(present), ensures that the script exists.
+      - When C(present), ensures the script exists.
       - When C(absent), ensures the script is removed.
     type: str
     default: present
@@ -92,14 +86,18 @@ param2:
   type: str
   sample: Foo is bar
 '''
+from datetime import datetime
 
 from ansible.module_utils.basic import (
     AnsibleModule, env_fallback
 )
+
 from ..module_utils.bigip import F5RestClient
 from ..module_utils.common import (
     F5ModuleError, AnsibleF5Parameters, f5_argument_spec, transform_name
 )
+from ..module_utils.icontrol import tmos_version
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -255,6 +253,8 @@ class ModuleManager(object):
         return False
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         changed = False
         result = dict()
         state = self.want.state
@@ -269,6 +269,7 @@ class ModuleManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, version)
         return result
 
     def _announce_deprecations(self, result):

@@ -7,22 +7,17 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['stableinterface'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_config
 short_description: Manage BIG-IP configuration sections
 description:
   - Manages a BIG-IP configuration by allowing TMSH commands that
-    modify running configuration, or merge SCF formatted files into
+    modify the running configuration, or merge SCF formatted files into
     the running configuration. Additionally, this module is of
     significant importance because it allows you to save your running
-    configuration to disk. Since the F5 module only manipulate running
-    configuration, it is important that you utilize this module to save
+    configuration to disk. Since all F5 modules manipulate the running
+    configuration, it is important you use this module to save
     that running config.
 version_added: "1.0.0"
 options:
@@ -33,7 +28,7 @@ options:
       - This operation is performed after any changes are made to the
         current running config. If no changes are made, the configuration
         is still saved to the startup config.
-      - This option will always cause the module to return changed.
+      - This option will always cause the module to return B(changed).
     type: bool
     default: yes
   reset:
@@ -48,12 +43,12 @@ options:
       - Loads the specified configuration that you want to merge into
         the running configuration. This is equivalent to using the
         C(tmsh) command C(load sys config from-terminal merge).
-      - If you need to read configuration from a file or template, use
+      - If you need to read the configuration from a file or template, use
         Ansible's C(file) or C(template) lookup plugins respectively.
     type: str
   verify:
     description:
-      - Validates the specified configuration to see whether they are
+      - Validates the specified configuration to see whether it is
         valid to replace the running configuration.
       - The running configuration will not be changed.
       - When this parameter is set to C(yes), no change will be reported
@@ -97,16 +92,17 @@ EXAMPLES = r'''
 
 RETURN = r'''
 stdout:
-  description: The set of responses from the options
+  description: The set of responses from the options.
   returned: always
   type: list
   sample: ['...', '...']
 stdout_lines:
-  description: The value of stdout split into a list
+  description: The value of stdout split into a list.
   returned: always
   type: list
   sample: [['...', '...'], ['...'], ['...']]
 '''
+from datetime import datetime
 
 try:
     from StringIO import StringIO
@@ -122,7 +118,10 @@ from ..module_utils.bigip import F5RestClient
 from ..module_utils.common import (
     F5ModuleError, AnsibleF5Parameters, f5_argument_spec
 )
-from ..module_utils.icontrol import upload_file
+from ..module_utils.icontrol import (
+    upload_file, tmos_version
+)
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -160,12 +159,15 @@ class ModuleManager(object):
         return lines
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         result = {}
 
         changed = self.execute()
 
         result.update(**self.changes.to_return())
         result.update(dict(changed=changed))
+        send_teem(start, self.module, version)
         return result
 
     def execute(self):

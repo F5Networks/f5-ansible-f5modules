@@ -7,11 +7,6 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['stableinterface'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_smtp
@@ -34,7 +29,7 @@ options:
   smtp_server:
     description:
       - SMTP server host name in the format of a fully qualified domain name.
-      - This value is required when create a new SMTP configuration.
+      - This value is required when creating a new SMTP configuration.
     type: str
   smtp_server_port:
     description:
@@ -44,13 +39,13 @@ options:
     type: int
   local_host_name:
     description:
-      - Host name used in SMTP headers in the format of a fully qualified
-        domain name. This setting does not refer to the BIG-IP system's hostname.
+      - Hostname used in SMTP headers in the format of a fully qualified
+        domain name. This setting does not refer to the hostname of the BIG-IP system.
     type: str
   from_address:
     description:
-      - Email address that the email is being sent from. This is the "Reply-to"
-        address that the recipient sees.
+      - Email address the email is being sent from. This is the "Reply-to"
+        address the recipient sees.
     type: str
   encryption:
     description:
@@ -64,24 +59,24 @@ options:
   authentication:
     description:
       - Credentials can be set on an SMTP server's configuration even if that
-        authentication is not used (think staging configs or emergency changes).
+        authentication is not used (for example, staging configs or emergency changes).
         This parameter acts as a switch to make the specified C(smtp_server_username)
         and C(smtp_server_password) parameters active or not.
-      - When C(yes), the authentication parameters will be active.
-      - When C(no), the authentication parameters will be inactive.
+      - When C(yes), the authentication parameters are active.
+      - When C(no), the authentication parameters are inactive.
     type: bool
   smtp_server_username:
     description:
-      - User name that the SMTP server requires when validating a user.
+      - User name the SMTP server requires when validating a user.
     type: str
   smtp_server_password:
     description:
-      - Password that the SMTP server requires when validating a user.
+      - Password the SMTP server requires when validating a user.
     type: str
   state:
     description:
-      - When C(present), ensures that the SMTP configuration exists.
-      - When C(absent), ensures that the SMTP configuration does not exist.
+      - When C(present), ensures the SMTP configuration exists.
+      - When C(absent), ensures the SMTP configuration does not exist.
     type: str
     choices:
       - present
@@ -93,8 +88,8 @@ options:
         C(smtp_server_password) is the same or different than the existing password.
         This parameter controls the updating of the C(smtp_server_password)
         credential.
-      - When C(always), will always update the password.
-      - When C(on_create), will only set the password for newly created SMTP server
+      - When C(always), the system always updates the password.
+      - When C(on_create), the system only sets the password for newly created SMTP server
         configurations.
     type: str
     choices:
@@ -155,7 +150,7 @@ authentication:
   type: bool
   sample: yes
 '''
-
+from datetime import datetime
 from ansible.module_utils.basic import (
     AnsibleModule, env_fallback
 )
@@ -165,6 +160,8 @@ from ..module_utils.common import (
     F5ModuleError, AnsibleF5Parameters, transform_name, f5_argument_spec, is_valid_hostname
 )
 from ..module_utils.ipaddress import is_valid_ip
+from ..module_utils.icontrol import tmos_version
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -364,6 +361,8 @@ class ModuleManager(object):
         return False
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         changed = False
         result = dict()
         state = self.want.state
@@ -378,6 +377,7 @@ class ModuleManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, version)
         return result
 
     def _announce_deprecations(self, result):

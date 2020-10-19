@@ -7,17 +7,12 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['stableinterface'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_firewall_log_profile
 short_description: Manages AFM logging profiles configured in the system
 description:
-  - Manages AFM logging profiles configured in the system along with basic information about each profile.
+  - Manages AFM (Advanced Firewall Manager) logging profiles configured in the system along with basic information about each profile.
 version_added: "1.0.0"
 options:
   name:
@@ -37,22 +32,22 @@ options:
         description:
           - Specifies the name of the log publisher used for DNS DoS events.
           - To specify the log_publisher on a different partition from the AFM log profile, specify the name in fullpath
-            format, e.g. C(/Foobar/log-publisher), otherwise the partition for log publisher
-            is inferred from C(partition) module parameter.
+            format, e.g. C(/Foobar/log-publisher), otherwise the partition for the log publisher
+            is inferred from the C(partition) module parameter.
         type: str
       sip_publisher:
         description:
           - Specifies the name of the log publisher used for SIP DoS events.
           - To specify the log_publisher on a different partition from the AFM log profile, specify the name in fullpath
-            format, e.g. C(/Foobar/log-publisher), otherwise the partition for log publisher
-            is inferred from C(partition) module parameter.
+            format, e.g. C(/Foobar/log-publisher), otherwise the partition for the log publisher
+            is inferred from the C(partition) module parameter.
         type: str
       network_publisher:
         description:
           - Specifies the name of the log publisher used for DoS Network events.
           - To specify the log_publisher on a different partition from the AFM log profile, specify the name in fullpath
-            format, e.g. C(/Foobar/log-publisher), otherwise the partition for log publisher
-            is inferred from C(partition) module parameter.
+            format, e.g. C(/Foobar/log-publisher), otherwise the partition for the log publisher
+            is inferred from the C(partition) module parameter.
         type: str
     type: dict
   ip_intelligence:
@@ -63,8 +58,8 @@ options:
         description:
           - Specifies the name of the log publisher used for IP Intelligence events.
           - To specify the log_publisher on a different partition from the AFM log profile, specify the name in fullpath
-            format, e.g. C(/Foobar/log-publisher), otherwise the partition for log publisher
-            is inferred from C(partition) module parameter.
+            format, e.g. C(/Foobar/log-publisher), otherwise the partition for the log publisher
+            is inferred the from C(partition) module parameter.
         type: str
       rate_limit:
         description:
@@ -75,12 +70,12 @@ options:
         type: str
       log_rtbh:
         description:
-          - Specifies, when C(yes), that remotely triggered blackholing events are logged.
+          - When C(yes), specifies remotely triggered blackholing events are logged.
         type: bool
       log_shun:
         description:
-          - Specifies, when C(yes), that IP Intelligence shun list events are logged.
-          - This option can only be set on C(global-network) built-in profile
+          - When C(yes), specifies IP Intelligence shun list events are logged.
+          - This option can only be set on the C(global-network) built-in profile.
         type: bool
       log_translation_fields:
         description:
@@ -98,8 +93,8 @@ options:
         description:
           - Specifies the name of the log publisher used for Port Misuse events.
           - To specify the log_publisher on a different partition from the AFM log profile, specify the name in fullpath
-            format, e.g. C(/Foobar/log-publisher), otherwise the partition for log publisher
-            is inferred from C(partition) module parameter.
+            format, e.g. C(/Foobar/log-publisher), otherwise the partition for the log publisher
+            is inferred from the C(partition) module parameter.
         type: str
       rate_limit:
         description:
@@ -118,7 +113,7 @@ options:
   state:
     description:
       - When C(state) is C(present), ensures the resource exists.
-      - When C(state) is C(absent), ensures that resource is removed. Attempts to remove built-in system profiles are
+      - When C(state) is C(absent), ensures the resource is removed. Attempts to remove built-in system profiles are
         ignored and no change is returned.
     type: str
     choices:
@@ -260,7 +255,7 @@ port_misuse:
       sample: "indefinite"
   sample: hash/dictionary of values
 '''
-
+from datetime import datetime
 from ansible.module_utils.basic import (
     AnsibleModule, env_fallback
 )
@@ -270,6 +265,8 @@ from ..module_utils.common import (
     F5ModuleError, AnsibleF5Parameters, transform_name, f5_argument_spec, flatten_boolean, fq_name
 )
 from ..module_utils.compare import compare_dictionary
+from ..module_utils.icontrol import tmos_version
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -651,6 +648,8 @@ class ModuleManager(object):
             )
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         changed = False
         result = dict()
         state = self.want.state
@@ -665,6 +664,7 @@ class ModuleManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, version)
         return result
 
     def present(self):

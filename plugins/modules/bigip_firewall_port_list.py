@@ -7,17 +7,12 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['stableinterface'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_firewall_port_list
 short_description: Manage port lists on BIG-IP AFM
 description:
-  - Manages the AFM port lists on a BIG-IP. This module can be used to add
+  - Manages the AFM (Advanced Firewall Manager) port lists on a BIG-IP. This module can be used to add
     and remove port list entries.
 version_added: "1.0.0"
 options:
@@ -33,19 +28,19 @@ options:
     default: Common
   description:
     description:
-      - Description of the port list
+      - Description of the port list.
     type: str
   ports:
     description:
-      - Simple list of port values to add to the list
+      - Simple list of port values to add to the list.
     type: list
     elements: str
   port_ranges:
     description:
       - A list of port ranges where the range starts with a port number, is followed
-        by a dash (-) and then a second number.
+        by a dash (-), and then a second number.
       - If the first number is greater than the second number, the numbers will be
-        reversed so-as to be properly formatted. ie, 90-78 would become 78-90.
+        reversed to be properly formatted, for example 90-78 would become 78-90.
     type: list
     elements: str
   port_lists:
@@ -58,7 +53,7 @@ options:
     elements: str
   state:
     description:
-      - When C(present), ensures that the address list and entries exists.
+      - When C(present), ensures the address list and entries exists.
       - When C(absent), ensures the address list is removed.
     type: str
     choices:
@@ -174,6 +169,7 @@ port_lists:
   type: list
   sample: [/Common/list1, /Common/list2]
 '''
+from datetime import datetime
 
 from ansible.module_utils.basic import (
     AnsibleModule, env_fallback
@@ -183,7 +179,10 @@ from ..module_utils.bigip import F5RestClient
 from ..module_utils.common import (
     F5ModuleError, AnsibleF5Parameters, transform_name, f5_argument_spec, fq_name
 )
-from ..module_utils.icontrol import module_provisioned
+from ..module_utils.icontrol import (
+    module_provisioned, tmos_version
+)
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -449,6 +448,8 @@ class ModuleManager(object):
             raise F5ModuleError(
                 "AFM must be provisioned to use this module."
             )
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         changed = False
         result = dict()
         state = self.want.state
@@ -463,6 +464,7 @@ class ModuleManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, version)
         return result
 
     def _announce_deprecations(self, result):

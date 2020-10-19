@@ -7,11 +7,6 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['stableinterface'],
-                    'supported_by': 'certified'}
-
 DOCUMENTATION = r'''
 ---
 module: bigip_gtm_datacenter
@@ -45,9 +40,9 @@ options:
       - The virtual address state. If C(absent), an attempt to delete the
         virtual address will be made. This will only succeed if this
         virtual address is not in use by a virtual server. C(present) creates
-        the virtual address and enables it. If C(enabled), enable the virtual
-        address if it exists. If C(disabled), create the virtual address if
-        needed, and set state to C(disabled).
+        the virtual address and enables it. If C(enabled), enables the virtual
+        address if it exists. If C(disabled), creates the virtual address if
+        needed, and sets state to C(disabled).
     type: str
     choices:
       - present
@@ -85,12 +80,12 @@ contact:
   type: str
   sample: admin@root.local
 description:
-  description: The description that was set for the datacenter.
+  description: The description for the datacenter.
   returned: changed
   type: str
   sample: Datacenter in NYC
 enabled:
-  description: Whether the datacenter is enabled or not
+  description: Whether the datacenter is enabled or not.
   returned: changed
   type: bool
   sample: true
@@ -105,12 +100,12 @@ state:
   type: str
   sample: disabled
 location:
-  description: The location that is set for the datacenter.
+  description: The location for the datacenter.
   returned: changed
   type: str
   sample: 222 West 23rd
 '''
-
+from datetime import datetime
 from ansible.module_utils.basic import (
     AnsibleModule, env_fallback
 )
@@ -119,7 +114,10 @@ from ..module_utils.bigip import F5RestClient
 from ..module_utils.common import (
     F5ModuleError, AnsibleF5Parameters, transform_name, f5_argument_spec
 )
-from ..module_utils.icontrol import module_provisioned
+from ..module_utils.icontrol import (
+    module_provisioned, tmos_version
+)
+from ..module_utils.teem import send_teem
 
 
 class Parameters(AnsibleF5Parameters):
@@ -299,6 +297,8 @@ class ModuleManager(object):
         return False
 
     def exec_module(self):
+        start = datetime.now().isoformat()
+        version = tmos_version(self.client)
         if not module_provisioned(self.client, 'gtm'):
             raise F5ModuleError(
                 "GTM must be provisioned to use this module."
@@ -317,6 +317,7 @@ class ModuleManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
+        send_teem(start, self.module, version)
         return result
 
     def present(self):
