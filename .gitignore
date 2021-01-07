@@ -9,6 +9,7 @@ Vagrantfile
 vault.txt
 **.cache/
 cache/
+.plugin-cache.yaml
 
 # Byte-compiled files
 __pycache__/

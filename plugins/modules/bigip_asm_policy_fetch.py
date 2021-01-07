@@ -220,34 +220,6 @@ class ApiParameters(Parameters):
 
 
 class ModuleParameters(Parameters):
-    def _policy_exists(self):
-        uri = 'https://{0}:{1}/mgmt/tm/asm/policies/'.format(
-            self.client.provider['server'],
-            self.client.provider['server_port'],
-        )
-        query = "?$filter=contains(name,'{0}')+and+contains(partition,'{1}')&$select=name,partition".format(
-            self.want.name, self.want.partition
-        )
-        resp = self.client.api.get(uri + query)
-        try:
-            response = resp.json()
-        except ValueError as ex:
-            raise F5ModuleError(str(ex))
-        if 'items' in response and response['items'] != []:
-            return True
-        return False
-
-    @property
-    def name(self):
-        if self._policy_exists():
-            return self._values['name']
-        else:
-            raise F5ModuleError(
-                "The specified ASM policy {0} on partition {1} does not exist on device.".format(
-                    self._values['name'], self._values['partition']
-                )
-            )
-
     @property
     def file(self):
         if self._values['file'] is not None:
@@ -386,7 +358,7 @@ class ModuleManager(object):
             raise F5ModuleError(
                 "File '{0}' already exists.".format(self.want.fulldest)
             )
-        self.execute()
+        self.create()
 
     def create(self):
         self._set_changed_options()
@@ -419,10 +391,41 @@ class ModuleManager(object):
         return True
 
     def exists(self):
+        self.policy_exists()
         if not self.want.inline:
             if os.path.exists(self.want.fulldest):
                 return True
         return False
+
+    def policy_exists(self):
+        uri = 'https://{0}:{1}/mgmt/tm/asm/policies/'.format(
+            self.client.provider['server'],
+            self.client.provider['server_port'],
+        )
+        query = "?$filter=contains(name,'{0}')+and+contains(partition,'{1}')&$select=name,partition".format(
+            self.want.name, self.want.partition
+        )
+        resp = self.client.api.get(uri + query)
+        try:
+            response = resp.json()
+        except ValueError as ex:
+            raise F5ModuleError(str(ex))
+
+        if resp.status not in [200, 201] or 'code' in response and response['code'] not in [200, 201]:
+            raise F5ModuleError(resp.content)
+
+        if 'items' in response and response['items'] != []:
+            if len(response['items']) == 1:
+                return True
+            else:
+                for item in response['items']:
+                    if item['name'] == self.want.name:
+                        return True
+        raise F5ModuleError(
+            "The specified ASM policy {0} on partition {1} does not exist on device.".format(
+                self.want.name, self.want.partition
+            )
+        )
 
     def create_on_device(self):
         self._set_policy_link()
@@ -494,9 +497,13 @@ class ModuleManager(object):
             response = resp.json()
         except ValueError as ex:
             raise F5ModuleError(str(ex))
-
         if 'items' in response and response['items'] != []:
-            policy_link = response['items'][0]['selfLink']
+            if len(response['items']) == 1:
+                policy_link = response['items'][0]['selfLink']
+            else:
+                for item in response['items']:
+                    if item['name'] == self.want.name:
+                        policy_link = item['selfLink']
 
         if not policy_link:
             raise F5ModuleError("The policy was not found")
