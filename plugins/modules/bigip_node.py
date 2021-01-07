@@ -1149,12 +1149,12 @@ class ArgumentSpec(object):
                 choices=[
                     'and_list', 'm_of_n', 'single'
                 ],
-                removed_in_version="1.7.0",
+                removed_in_version="1.8.0",
                 removed_from_collection="f5networks.f5_modules"
             ),
             quorum=dict(
                 type='int',
-                removed_in_version="1.7.0",
+                removed_in_version="1.8.0",
                 removed_from_collection="f5networks.f5_modules"
             ),
 

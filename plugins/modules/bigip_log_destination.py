@@ -1707,7 +1707,7 @@ class ArgumentSpec(object):
                         ]
                     )
                 ),
-                removed_in_version="1.7.0",
+                removed_in_version="1.8.0",
                 removed_from_collection="f5networks.f5_modules"
             ),
             syslog_settings=dict(
@@ -1724,7 +1724,7 @@ class ArgumentSpec(object):
                     ),
                     forward_to=dict()
                 ),
-                removed_in_version="1.7.0",
+                removed_in_version="1.8.0",
                 removed_from_collection="f5networks.f5_modules"
             ),
         )
