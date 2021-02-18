@@ -70,6 +70,7 @@ options:
     description:
       - Pool member port.
       - This value cannot be changed after it has been set.
+      - Parameter must be provided when using aggregates.
     type: int
   connection_limit:
     description:
@@ -191,9 +192,6 @@ options:
     default: no
     aliases:
       - purge
-notes:
-  - In previous versions of this module which used the SDK, the C(name) parameter would act as C(fqdn) if C(address) or
-    C(fqdn) were not provided.
 extends_documentation_fragment: f5networks.f5_modules.f5
 author:
   - Tim Rupp (@caphrim007)
@@ -403,6 +401,7 @@ replace_all_with:
 
 import os
 import re
+
 from copy import deepcopy
 from datetime import datetime
 
@@ -423,7 +422,6 @@ from ..module_utils.compare import cmp_str_with_none
 from ..module_utils.icontrol import (
     TransactionContextManager, tmos_version
 )
-from ..module_utils.icontrol import tmos_version
 from ..module_utils.teem import send_teem
 
 
@@ -500,7 +498,10 @@ class ModuleParameters(Parameters):
     @property
     def full_name_dict(self):
         if self._values['name'] is None:
-            name = self._values['address'] if self._values['address'] else self._values['fqdn']
+            if self._values['address'] and not self._values['fqdn']:
+                name = self._values['address']
+            else:
+                name = self._values['fqdn']
         else:
             name = self._values['name']
         return dict(
@@ -1106,12 +1107,24 @@ class ModuleManager(object):
             return False
         return False
 
+    def _join_address_port(self, item):
+        if 'port' not in item:
+            raise F5ModuleError(
+                "Aggregates must be provided with both address and port."
+            )
+        delimiter = ':'
+        try:
+            if validate_ip_v6_address(item['address']):
+                delimiter = '.'
+        except TypeError:
+            pass
+        return '{0}{1}{2}'.format(item['address'], delimiter, item['port'])
+
     def compare_addresses(self, items):
         if any('address' in item for item in items):
-            aggregates = [item['address'] for item in items if 'address' in item and item['address']]
+            aggregates = [self._join_address_port(item) for item in items if 'address' in item and item['address']]
             collection = [member['address'] for member in self.on_device]
             diff = set(collection) - set(aggregates)
-
             if diff:
                 addresses = [item['selfLink'] for item in self.on_device if item['address'] in diff]
                 self.purge_links.extend(addresses)
@@ -1348,7 +1361,6 @@ class ModuleManager(object):
     def _update_address_with_existing_nodes(self):
         try:
             have = self.read_current_node_from_device(self.want.node_name)
-
             if self.want.fqdn_auto_populate and self.want.reuse_nodes:
                 self.module.warn(
                     "'fqdn_auto_populate' is discarded in favor of the re-used node's auto-populate setting."
