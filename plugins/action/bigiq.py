@@ -27,12 +27,8 @@ from ansible.module_utils._text import to_text
 from ansible.module_utils.connection import Connection
 from ansible.utils.display import Display
 
-try:
-    from ansible_collections.ansible.netcommon.plugins.module_utils.network.common.utils import load_provider
-    from ansible_collections.ansible.netcommon.plugins.action.network import ActionModule as ActionNetworkModule
-except ImportError:
-    from ansible.module_utils.network.common.utils import load_provider
-    from ansible.plugins.action.network import ActionModule as ActionNetworkModule
+from ansible_collections.ansible.netcommon.plugins.module_utils.network.common.utils import load_provider
+from ansible_collections.ansible.netcommon.plugins.action.network import ActionModule as ActionNetworkModule
 
 from ansible_collections.f5networks.f5_modules.plugins.module_utils.common import f5_provider_spec
 
@@ -90,5 +86,5 @@ class ActionModule(ActionNetworkModule):
                 conn.send_command('exit')
                 out = conn.get_prompt()
 
-        result = super(ActionModule, self).run(tmp, task_vars)
+        result = super(ActionModule, self).run(task_vars=task_vars)
         return result
