@@ -18,9 +18,9 @@ version_added: "1.0.0"
 options:
   name:
     description:
-      - The name of the server.(If the virtual server is auto-discovered from the LTM,then the partition
-         name will need to be included as part of the virtualserver name when referencing from the module
-         ("/Common/vsname"))
+      - The name of the server.
+      - If the virtual server is auto-discovered from the LTM,then the partition name needs to be included as
+        part of the virtual server name when referencing from the module e.g. "/Common/vsname".
     type: str
     required: True
   state:
@@ -1426,7 +1426,7 @@ class BaseManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
-        send_teem(start, self.module, version)
+        send_teem(start, self.client, self.module, version)
         return result
 
     def _announce_deprecations(self, result):
