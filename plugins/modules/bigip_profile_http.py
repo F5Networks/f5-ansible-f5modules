@@ -1491,7 +1491,7 @@ class ModuleManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
-        send_teem(start, self.module, version)
+        send_teem(start, self.client, self.module, version)
         return result
 
     def _announce_deprecations(self, result):
@@ -1636,7 +1636,7 @@ class ModuleManager(object):
 class ArgumentSpec(object):
     def __init__(self):
         self.supports_check_mode = True
-        self.chunk = ['rechunk', 'selective', 'preserve']
+        self.chunk = ['rechunk', 'selective', 'preserve', 'sustain', 'unchunk']
         self.choices = ['pass-through', 'reject']
         self.select = ['allow', 'pass-through', 'reject']
         argument_spec = dict(

@@ -387,7 +387,7 @@ class ModuleParameters(Parameters):
     @property
     def last_resort_pool(self):
         if self._values['last_resort_pool'] in [None, '', 'none']:
-            return ''
+            return None
         return '{0} {1}'.format(
             self.type, fq_name(self.partition, self._values['last_resort_pool'])
         )
@@ -636,6 +636,8 @@ class Difference(object):
     def irules(self):
         if self.want.irules is None:
             return None
+        if self.have.rules is None:
+            return self.want.rules
         if self.want.irules == '' and self.have.irules is None:
             return None
         if self.want.irules == '' and len(self.have.irules) > 0:
@@ -712,7 +714,7 @@ class ModuleManager(object):
         result.update(**changes)
         result.update(dict(changed=changed))
         self._announce_deprecations(result)
-        send_teem(start, self.module, version)
+        send_teem(start, self.client, self.module, version)
         return result
 
     def _announce_deprecations(self, result):
