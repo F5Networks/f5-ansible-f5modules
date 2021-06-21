@@ -104,6 +104,10 @@ options:
       - virtual-servers
       - vlans
       - "!all"
+      - "!as3"
+      - "!do"
+      - "!ts"
+      - "!cfe"
       - "!monitors"
       - "!profiles"
       - "!apm-access-profiles"
@@ -366,6 +370,13 @@ asm_policies:
       returned: queried
       type: list
       sample: ['/Common/foo_VS/']
+    manual_virtual_servers:
+      description:
+        - virtual servers that have Manual Configuration (Advanced) LTM policy configuration which, in turn,
+          have rule(s) built with ASM control actions enabled.That config is in fact maintained under a field called manualVirtualServers.
+      returned: queried
+      type: list
+      sample: ['/Common/test_VS/']
     allowed_response_codes:
       description:
         - Lists the response status codes between 400 and 599 that the security profile considers legal.
@@ -1362,7 +1373,7 @@ fasthttp_profiles:
       returned: queried
       type: int
       sample: 300
-    insert_x_forwarded_for:
+    insert_xforwarded_for:
       description:
         - Whether the system inserts the X-Forwarded-For header in an HTTP request with the
           client IP address, to use with connection pooling.
@@ -2863,7 +2874,7 @@ http_profiles:
       returned: queried
       type: bool
       sample: yes
-    insert_x_forwarded_for:
+    insert_xforwarded_for:
       description:
         - When C(yes), specifies the system inserts an X-Forwarded-For header in
           an HTTP request with the client IP address, to use with connection pooling.
@@ -3883,6 +3894,48 @@ ltm_policies:
             http_uri:
               description:
                 - This condition matches on an HTTP URI.
+              returned: when defined in the condition.
+              type: bool
+              sample: no
+            datagroup:
+              description:
+                - This condition matches on an HTTP URI.
+              returned: when defined in the condition.
+              type: str
+              sample: /Common/policy_using_datagroup
+            tcp:
+              description:
+                - This condition matches on an tcp parameters.
+              returned: when defined in the condition.
+              type: bool
+              sample: no
+            address:
+              description:
+                - This condition matches on an tcp address.
+              returned: when defined in the condition.
+              type: bool
+              sample: no
+            matches:
+              description:
+                - This condition matches on an address.
+              returned: when defined in the condition.
+              type: bool
+              sample: no
+            proxy_connect:
+              description:
+                - Specifies the value matched on is proxyConnect.
+              returned: when defined in the condition.
+              type: bool
+              sample: no
+            proxy_request:
+              description:
+                - Specifies the value matched on is proxyRequest.
+              returned: when defined in the condition.
+              type: bool
+              sample: no
+            remote:
+              description:
+                - Specifies the value matched on is remote.
               returned: when defined in the condition.
               type: bool
               sample: no
@@ -7391,7 +7444,7 @@ from ..module_utils.common import (
 )
 from ..module_utils.urls import parseStats
 from ..module_utils.icontrol import (
-    tmos_version, modules_provisioned
+    tmos_version, modules_provisioned, packages_installed
 )
 from ..module_utils.ipaddress import is_valid_ip
 from ..module_utils.teem import send_teem
@@ -7425,6 +7478,17 @@ class BaseManager(object):
         # This list is provided to the specific fact manager by the
         # master ModuleManager of this module.
         self.provisioned_modules = []
+
+        # A list of packages currently installed on the device.
+        #
+        # This list is used by different fact managers to check to see
+        # if they should even attempt to gather information. If the package is
+        # not provisioned, then it is likely that the REST API will not
+        # return valid data.
+        #
+        # This list is provided to the specific fact manager by the
+        # master ModuleManager of this module.
+        self.installed_packages = []
 
     def exec_module(self):
         start = datetime.datetime.now().isoformat()
@@ -7623,11 +7687,12 @@ class As3FactManager(BaseManager):
         return result
 
     def _exec_module(self):
+        if 'as3' not in self.installed_packages:
+            return []
         facts = self.read_facts()
         return facts
 
     def read_facts(self):
-        results = []
         collection = self.read_collection_from_device()
         return collection
 
@@ -7641,6 +7706,9 @@ class As3FactManager(BaseManager):
             response = resp.json()
         except ValueError as ex:
             raise F5ModuleError(str(ex))
+
+        if resp.status == 204 or 'code' in response and response['code'] == 204:
+            return []
 
         if resp.status not in [200, 201] or 'code' in response and response['code'] not in [200, 201]:
             raise F5ModuleError(resp.content)
@@ -7792,6 +7860,7 @@ class AsmPolicyFactParameters(BaseParameters):
         'hasParent': 'has_parent',
         'protocolIndependent': 'protocol_independent',
         'virtualServers': 'virtual_servers',
+        'manualVirtualServers': 'manual_virtual_servers',
         'allowedResponseCodes': 'allowed_response_codes',
         'learningMode': 'learning_mode',
         'enforcementMode': 'enforcement_mode',
@@ -7875,6 +7944,13 @@ class AsmPolicyFactParameters(BaseParameters):
         if self._values['id'] is None:
             return None
         return self._values['id']
+
+    @property
+    def manual_virtual_servers(self):
+        if 'manual_virtual_servers' in self._values:
+            if self._values['manual_virtual_servers'] is None:
+                return None
+            return self._values['manual_virtual_servers']
 
     @property
     def signature_staging(self):
@@ -8766,12 +8842,12 @@ class CFEFactManager(BaseManager):
         return result
 
     def _exec_module(self):
-        results = []
+        if 'cfe' not in self.installed_packages:
+            return []
         facts = self.read_facts()
         return facts
 
     def read_facts(self):
-        results = []
         collection = self.read_collection_from_device()
         return collection
 
@@ -9085,12 +9161,12 @@ class DOFactManager(BaseManager):
         return result
 
     def _exec_module(self):
-        results = []
+        if 'do' not in self.installed_packages:
+            return []
         facts = self.read_facts()
         return facts
 
     def read_facts(self):
-        results = []
         collection = self.read_collection_from_device()
         return collection
 
@@ -9228,7 +9304,7 @@ class FastHttpProfilesParameters(BaseParameters):
         'headerInsert': 'request_header_insert',
         'http_11CloseWorkarounds': 'http_1_1_close_workarounds',
         'idleTimeout': 'idle_timeout',
-        'insertXforwardedFor': 'insert_x_forwarded_for',
+        'insertXforwardedFor': 'insert_xforwarded_for',
         'maxHeaderSize': 'maximum_header_size',
         'maxRequests': 'maximum_requests',
         'mssOverride': 'maximum_segment_size_override',
@@ -9256,7 +9332,7 @@ class FastHttpProfilesParameters(BaseParameters):
         'request_header_insert',
         'http_1_1_close_workarounds',
         'idle_timeout',
-        'insert_x_forwarded_for',
+        'insert_xforwarded_for',
         'maximum_header_size',
         'maximum_requests',
         'maximum_segment_size_override',
@@ -9287,8 +9363,8 @@ class FastHttpProfilesParameters(BaseParameters):
         return flatten_boolean(self._values['reset_on_timeout'])
 
     @property
-    def insert_x_forwarded_for(self):
-        return flatten_boolean(self._values['insert_x_forwarded_for'])
+    def insert_xforwarded_for(self):
+        return flatten_boolean(self._values['insert_xforwarded_for'])
 
     @property
     def http_1_1_close_workarounds(self):
@@ -11226,7 +11302,7 @@ class HttpProfilesParameters(BaseParameters):
         'defaultsFrom': 'parent',
         'acceptXff': 'accept_xff',
         'explicitProxy': 'explicit_proxy',
-        'insertXforwardedFor': 'insert_x_forwarded_for',
+        'insertXforwardedFor': 'insert_xforwarded_for',
         'lwsWidth': 'lws_max_columns',
         'oneconnectTransformations': 'onconnect_transformations',
         'proxyType': 'proxy_mode',
@@ -11259,7 +11335,7 @@ class HttpProfilesParameters(BaseParameters):
         'default_connect_handling',
         'hsts_include_subdomains',
         'hsts_enabled',
-        'insert_x_forwarded_for',
+        'insert_xforwarded_for',
         'lws_max_columns',
         'onconnect_transformations',
         'proxy_mode',
@@ -11396,10 +11472,10 @@ class HttpProfilesParameters(BaseParameters):
         return self._values['hsts']['maximumAge']
 
     @property
-    def insert_x_forwarded_for(self):
-        if self._values['insert_x_forwarded_for'] is None:
+    def insert_xforwarded_for(self):
+        if self._values['insert_xforwarded_for'] is None:
             return None
-        return flatten_boolean(self._values['insert_x_forwarded_for'])
+        return flatten_boolean(self._values['insert_xforwarded_for'])
 
     @property
     def onconnect_transformations(self):
@@ -12486,6 +12562,15 @@ class LtmPolicyParameters(BaseParameters):
             tmp['external'] = flatten_boolean(condition.pop('external', None))
             tmp['http_basic_auth'] = flatten_boolean(condition.pop('httpBasicAuth', None))
             tmp['http_host'] = flatten_boolean(condition.pop('httpHost', None))
+            tmp['datagroup'] = condition.pop('datagroup', None)
+            tmp['tcp'] = flatten_boolean(condition.pop('tcp', None))
+            tmp['remote'] = flatten_boolean(condition.pop('remote', None))
+            tmp['matches'] = flatten_boolean(condition.pop('matches', None))
+            tmp['address'] = flatten_boolean(condition.pop('address', None))
+            tmp['present'] = flatten_boolean(condition.pop('present', None))
+            tmp['proxy_connect'] = flatten_boolean(condition.pop('proxyConnect', None))
+            tmp['proxy_request'] = flatten_boolean(condition.pop('proxyRequest', None))
+            tmp['host'] = flatten_boolean(condition.pop('host', None))
             tmp['http_uri'] = flatten_boolean(condition.pop('httpUri', None))
             tmp['request'] = flatten_boolean(condition.pop('request', None))
             tmp['username'] = flatten_boolean(condition.pop('username', None))
@@ -14541,12 +14626,12 @@ class TSFactManager(BaseManager):
         return result
 
     def _exec_module(self):
-        results = []
+        if 'ts' not in self.installed_packages:
+            return []
         facts = self.read_facts()
         return facts
 
     def read_facts(self):
-        results = []
         collection = self.read_collection_from_device()
         return collection
 
@@ -14566,7 +14651,7 @@ class TSFactManager(BaseManager):
 
         if 'message' not in response:
             return []
-        result = {}
+        result = dict()
         result['declaration'] = response['declaration']
         return result
 
@@ -17085,8 +17170,10 @@ class ModuleManager(object):
         results = dict()
         client = F5RestClient(**self.module.params)
         prov = modules_provisioned(client)
+        rpm = packages_installed(client)
         for manager in managers:
             manager.provisioned_modules = prov
+            manager.installed_packages = rpm
             result = manager.exec_module()
             results.update(result)
         return results
@@ -17203,6 +17290,10 @@ class ArgumentSpec(object):
                     # Negations of non-meta-choices
                     '!apm-access-profiles',
                     '!apm-access-policies',
+                    '!as3',
+                    '!do',
+                    '!ts',
+                    '!cfe',
                     '!asm-policy-stats',
                     '!asm-policies',
                     '!asm-server-technologies',
