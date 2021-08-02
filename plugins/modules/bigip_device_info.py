@@ -372,8 +372,8 @@ asm_policies:
       sample: ['/Common/foo_VS/']
     manual_virtual_servers:
       description:
-        - virtual servers that have Manual Configuration (Advanced) LTM policy configuration which, in turn,
-          have rule(s) built with ASM control actions enabled.That config is in fact maintained under a field called manualVirtualServers.
+        - The virtual servers that have Advanced LTM policy configuration which, in turn, have rule(s) built
+          with ASM control actions enabled.
       returned: queried
       type: list
       sample: ['/Common/test_VS/']
@@ -3905,13 +3905,13 @@ ltm_policies:
               sample: /Common/policy_using_datagroup
             tcp:
               description:
-                - This condition matches on an tcp parameters.
+                - This condition matches on TCP parameters.
               returned: when defined in the condition.
               type: bool
               sample: no
             address:
               description:
-                - This condition matches on an tcp address.
+                - This condition matches on a TCP address.
               returned: when defined in the condition.
               type: bool
               sample: no
@@ -5111,6 +5111,12 @@ ssl_certs:
       returned: queried
       type: str
       sample: "2018-05-15T21:11:15Z"
+    serial_no:
+      description:
+        - Specifies certificate's serial number
+      returned: queried
+      type: str
+      sample: "1234567890"
     subject_alternative_name:
       description:
         - Displays the Subject Alternative Name for the certificate.
@@ -13830,6 +13836,7 @@ class SslCertificatesParameters(BaseParameters):
         'expirationDate': 'expiration_timestamp',
         'createTime': 'create_time',
         'subjectAlternativeName': 'subject_alternative_name',
+        'serialNumber': 'serial_no',
     }
 
     returnables = [
@@ -13848,6 +13855,7 @@ class SslCertificatesParameters(BaseParameters):
         'expiration_timestamp',
         'create_time',
         'subject_alternative_name',
+        'serial_no',
     ]
 
     @property
@@ -16398,8 +16406,20 @@ class VirtualServersParameters(BaseParameters):
                 return 'automap'
             elif self._values['snat_type']['type'] == 'none':
                 return 'none'
-            elif self._values['snat_type']['type'] == 'pool':
+            elif self._values['snat_type']['type'] == 'snat':
                 return 'snat'
+
+    @property
+    def snat_pool(self):
+        if self._values['snat_type'] is None:
+            return None
+        if 'type' in self._values['snat_type']:
+            if self._values['snat_type']['type'] == 'automap':
+                return 'none'
+            elif self._values['snat_type']['type'] == 'none':
+                return 'none'
+            elif self._values['snat_type']['type'] == 'snat':
+                return self._values['snat_type']["pool"]
 
     @property
     def connection_mirror_enabled(self):
