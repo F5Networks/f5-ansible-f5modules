@@ -13,7 +13,7 @@ module: bigip_iapp_service
 short_description: Manages TCL iApp services on a BIG-IP
 description:
   - Manages TCL iApp services on a BIG-IP.
-  - The API that the system uses to communicate with on the BIG-IP is C(/mgmt/tm/sys/application/service/).
+  - The API the system uses to communicate with on the BIG-IP is C(/mgmt/tm/sys/application/service/).
 version_added: "1.0.0"
 options:
   name:
@@ -69,7 +69,7 @@ options:
         service has created, if they are not updated directly through the
         iApp.
       - When C(no), allows updates outside of the iApp.
-      - If this option is specified in the Ansible task, it will take precedence
+      - If this option is specified in the Ansible task, it takes precedence
         over any similar setting in the iApp Service payload that you provide in
         the C(parameters) field.
     type: bool
@@ -77,15 +77,15 @@ options:
     description:
       - The traffic group for the iApp service. When creating a new service, if
         this value is not specified, the default of C(/Common/traffic-group-1)
-        will be used.
-      - If this option is specified in the Ansible task, it will take precedence
+        is used.
+      - If this option is specified in the Ansible task, it takes precedence
         over any similar setting in the iApp Service payload that you provide in
         the C(parameters) field.
     type: str
   metadata:
     description:
       - Metadata associated with the iApp service.
-      - If this option is specified in the Ansible task, it will take precedence
+      - If this option is specified in the Ansible task, it takes precedence
         over any similar setting in the iApp Service payload that you provide in
         the C(parameters) field.
     type: list
@@ -93,14 +93,14 @@ options:
   description:
     description:
       - Description of the iApp service.
-      - If this option is specified in the Ansible task, it will take precedence
+      - If this option is specified in the Ansible task, it takes precedence
         over any similar setting in the iApp Service payload that you provide in
         the C(parameters) field.
     type: str
   device_group:
     description:
       - The device group for the iApp service.
-      - If this option is specified in the Ansible task, it will take precedence
+      - If this option is specified in the Ansible task, it takes precedence
         over any similar setting in the iApp Service payload that you provide in
         the C(parameters) field.
     type: str
@@ -784,7 +784,7 @@ class ModuleManager(object):
 
     def update_on_device(self):
         params = self.changes.api_params()
-        if params:
+        if params or self.want.force:
             params['execute-action'] = 'definition'
             base_uri = "https://{0}:{1}/mgmt/tm/sys/application/service/".format(
                 self.client.provider['server'],
