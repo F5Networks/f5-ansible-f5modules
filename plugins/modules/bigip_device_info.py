@@ -18,6 +18,13 @@ description:
   - This module was called C(bigip_device_facts) before Ansible 2.9. The usage did not change.
 version_added: "1.0.0"
 options:
+  partition:
+    description:
+      - Specifies the partition to gather the resource information from.
+      - The default value for the partition is taken as Common.
+    type: str
+    default: Common
+    version_added: "1.14.0"
   gather_subset:
     description:
       - When supplied, this argument will restrict the information returned to a given subset.
@@ -7441,6 +7448,7 @@ from ansible.module_utils.parsing.convert_bool import BOOLEANS_TRUE
 from ansible.module_utils.six import (
     iteritems, string_types
 )
+from ansible.module_utils.urls import urlparse
 
 from ipaddress import ip_interface
 
@@ -7646,18 +7654,30 @@ class ApmAccessPolicyFactManager(BaseManager):
 
     def read_facts(self):
         results = []
-        collection = self.read_collection_from_device()
+        collection = self.increment_read()
         for resource in collection:
             params = ApmAccessProfileFactParameters(params=resource)
             results.append(params)
         return results
 
-    def read_collection_from_device(self):
+    def increment_read(self):
+        n = 0
+        result = []
+        while True:
+            items = self.read_collection_from_device(skip=n)
+            if not items:
+                break
+            result.extend(items)
+            n = n + 5
+        return result
+
+    def read_collection_from_device(self, skip=0):
         uri = "https://{0}:{1}/mgmt/tm/apm/policy/access-policy".format(
             self.client.provider['server'],
             self.client.provider['server_port'],
         )
-        resp = self.client.api.get(uri)
+        query = "?$top=5&$skip={0}&$filter=partition+eq+{1}".format(skip, self.module.params['partition'])
+        resp = self.client.api.get(uri + query)
         try:
             response = resp.json()
         except ValueError as ex:
@@ -8281,7 +8301,11 @@ class AsmPolicyFactManagerV12(AsmPolicyFactManager):
         )
 
         to_expand = 'policy-builder,geolocation-enforcement,csrf-protection'
-        query = '?$top=10&$skip={0}&$expand={1}'.format(skip, to_expand)
+        query = '?$top=10&$skip={0}&$expand={1}&$filter=partition+eq+{2}'.format(
+            skip,
+            to_expand,
+            self.module.params['partition']
+        )
 
         resp = self.client.api.get(uri + query)
 
@@ -8315,7 +8339,11 @@ class AsmPolicyFactManagerV13(AsmPolicyFactManager):
         )
         to_expand = 'general,signature-settings,header-settings,cookie-settings,antivirus,' \
                     'policy-builder,csrf-protection,csrf-urls'
-        query = '?$top=10&$skip={0}&$expand={1}'.format(skip, to_expand)
+        query = '?$top=10&$skip={0}&$expand={1}&$filter=partition+eq+{2}'.format(
+            skip,
+            to_expand,
+            self.module.params['partition']
+        )
         resp = self.client.api.get(uri + query)
 
         try:
@@ -8734,8 +8762,10 @@ class ClientSslProfilesParameters(BaseParameters):
 
     @property
     def ciphers(self):
-        if self._values['ciphers'] in [None, 'none']:
+        if self._values['ciphers'] is None:
             return None
+        if self._values['ciphers'] == 'none':
+            return 'none'
         return self._values['ciphers'].split(' ')
 
     @property
@@ -8801,18 +8831,30 @@ class ClientSslProfilesFactManager(BaseManager):
 
     def read_facts(self):
         results = []
-        collection = self.read_collection_from_device()
+        collection = self.increment_read()
         for resource in collection:
             params = ClientSslProfilesParameters(params=resource)
             results.append(params)
         return results
 
-    def read_collection_from_device(self):
+    def increment_read(self):
+        n = 0
+        result = []
+        while True:
+            items = self.read_collection_from_device(skip=n)
+            if not items:
+                break
+            result.extend(items)
+            n = n + 5
+        return result
+
+    def read_collection_from_device(self, skip=0):
         uri = "https://{0}:{1}/mgmt/tm/ltm/profile/client-ssl".format(
             self.client.provider['server'],
             self.client.provider['server_port'],
         )
-        resp = self.client.api.get(uri)
+        query = "?$top=5&$skip={0}&$filter=partition+eq+{1}".format(skip, self.module.params['partition'])
+        resp = self.client.api.get(uri + query)
         try:
             response = resp.json()
         except ValueError as ex:
@@ -8963,18 +9005,33 @@ class DeviceGroupsFactManager(BaseManager):
 
     def read_facts(self):
         results = []
-        collection = self.read_collection_from_device()
+        collection = self.increment_read()
         for resource in collection:
             params = DeviceGroupsParameters(params=resource)
             results.append(params)
         return results
 
-    def read_collection_from_device(self):
-        uri = "https://{0}:{1}/mgmt/tm/cm/device-group/?expandSubcollections=true".format(
+    def increment_read(self):
+        n = 0
+        result = []
+        while True:
+            items = self.read_collection_from_device(skip=n)
+            if not items:
+                break
+            result.extend(items)
+            n = n + 5
+        return result
+
+    def read_collection_from_device(self, skip=0):
+        uri = "https://{0}:{1}/mgmt/tm/cm/device-group/".format(
             self.client.provider['server'],
             self.client.provider['server_port'],
         )
-        resp = self.client.api.get(uri)
+        query = "?expandSubcollections=true&$top=5&$skip={0}&$filter=partition+eq+{1}".format(
+            skip,
+            self.module.params['partition']
+        )
+        resp = self.client.api.get(uri + query)
         try:
             response = resp.json()
         except ValueError as ex:
@@ -9120,18 +9177,30 @@ class DevicesFactManager(BaseManager):
 
     def read_facts(self):
         results = []
-        collection = self.read_collection_from_device()
+        collection = self.increment_read()
         for resource in collection:
             params = DevicesParameters(params=resource)
             results.append(params)
         return results
 
-    def read_collection_from_device(self):
+    def increment_read(self):
+        n = 0
+        result = []
+        while True:
+            items = self.read_collection_from_device(skip=n)
+            if not items:
+                break
+            result.extend(items)
+            n = n + 5
+        return result
+
+    def read_collection_from_device(self, skip=0):
         uri = "https://{0}:{1}/mgmt/tm/cm/device".format(
             self.client.provider['server'],
             self.client.provider['server_port'],
         )
-        resp = self.client.api.get(uri)
+        query = "?$top=5&$skip={0}&$filter=partition+eq+{1}".format(skip, self.module.params['partition'])
+        resp = self.client.api.get(uri + query)
         try:
             response = resp.json()
         except ValueError as ex:
@@ -9269,18 +9338,30 @@ class ExternalMonitorsFactManager(BaseManager):
 
     def read_facts(self):
         results = []
-        collection = self.read_collection_from_device()
+        collection = self.increment_read()
         for resource in collection:
             params = ExternalMonitorsParameters(params=resource)
             results.append(params)
         return results
 
-    def read_collection_from_device(self):
+    def increment_read(self):
+        n = 0
+        result = []
+        while True:
+            items = self.read_collection_from_device(skip=n)
+            if not items:
+                break
+            result.extend(items)
+            n = n + 5
+        return result
+
+    def read_collection_from_device(self, skip=0):
         uri = "https://{0}:{1}/mgmt/tm/ltm/monitor/external".format(
             self.client.provider['server'],
             self.client.provider['server_port'],
         )
-        resp = self.client.api.get(uri)
+        query = "?$top=5&$skip={0}&$filter=partition+eq+{1}".format(skip, self.module.params['partition'])
+        resp = self.client.api.get(uri + query)
         try:
             response = resp.json()
         except ValueError as ex:
@@ -9417,18 +9498,30 @@ class FastHttpProfilesFactManager(BaseManager):
 
     def read_facts(self):
         results = []
-        collection = self.read_collection_from_device()
+        collection = self.increment_read()
         for resource in collection:
             params = FastHttpProfilesParameters(params=resource)
             results.append(params)
         return results
 
-    def read_collection_from_device(self):
+    def increment_read(self):
+        n = 0
+        result = []
+        while True:
+            items = self.read_collection_from_device(skip=n)
+            if not items:
+                break
+            result.extend(items)
+            n = n + 5
+        return result
+
+    def read_collection_from_device(self, skip=0):
         uri = "https://{0}:{1}/mgmt/tm/ltm/profile/fasthttp".format(
             self.client.provider['server'],
             self.client.provider['server_port'],
         )
-        resp = self.client.api.get(uri)
+        query = "?$top=5&$skip={0}&$filter=partition+eq+{1}".format(skip, self.module.params['partition'])
+        resp = self.client.api.get(uri + query)
         try:
             response = resp.json()
         except ValueError as ex:
@@ -9743,18 +9836,30 @@ class FastL4ProfilesFactManager(BaseManager):
 
     def read_facts(self):
         results = []
-        collection = self.read_collection_from_device()
+        collection = self.increment_read()
         for resource in collection:
             params = FastL4ProfilesParameters(params=resource)
             results.append(params)
         return results
 
-    def read_collection_from_device(self):
+    def increment_read(self):
+        n = 0
+        result = []
+        while True:
+            items = self.read_collection_from_device(skip=n)
+            if not items:
+                break
+            result.extend(items)
+            n = n + 5
+        return result
+
+    def read_collection_from_device(self, skip=0):
         uri = "https://{0}:{1}/mgmt/tm/ltm/profile/fastl4".format(
             self.client.provider['server'],
             self.client.provider['server_port'],
         )
-        resp = self.client.api.get(uri)
+        query = "?$top=5&$skip={0}&$filter=partition+eq+{1}".format(skip, self.module.params['partition'])
+        resp = self.client.api.get(uri + query)
         try:
             response = resp.json()
         except ValueError as ex:
@@ -9842,18 +9947,30 @@ class GatewayIcmpMonitorsFactManager(BaseManager):
 
     def read_facts(self):
         results = []
-        collection = self.read_collection_from_device()
+        collection = self.increment_read()
         for resource in collection:
             params = GatewayIcmpMonitorsParameters(params=resource)
             results.append(params)
         return results
 
-    def read_collection_from_device(self):
+    def increment_read(self):
+        n = 0
+        result = []
+        while True:
+            items = self.read_collection_from_device(skip=n)
+            if not items:
+                break
+            result.extend(items)
+            n = n + 5
+        return result
+
+    def read_collection_from_device(self, skip=0):
         uri = "https://{0}:{1}/mgmt/tm/ltm/monitor/gateway-icmp".format(
             self.client.provider['server'],
             self.client.provider['server_port'],
         )
-        resp = self.client.api.get(uri)
+        query = "?$top=5&$skip={0}&$filter=partition+eq+{1}".format(skip, self.module.params['partition'])
+        resp = self.client.api.get(uri + query)
         try:
             response = resp.json()
         except ValueError as ex:
@@ -10081,18 +10198,32 @@ class GtmAPoolsFactManager(BaseManager):
 
     def read_facts(self):
         results = []
-        collection = self.read_collection_from_device()
+        collection = self.increment_read()
         for resource in collection:
             params = GtmXPoolsParameters(params=resource)
             results.append(params)
         return results
 
-    def read_collection_from_device(self):
+    def increment_read(self):
+        n = 0
+        result = []
+        while True:
+            items = self.read_collection_from_device(skip=n)
+            if not items:
+                break
+            result.extend(items)
+            n = n + 5
+        return result
+
+    def read_collection_from_device(self, skip=0):
         uri = "https://{0}:{1}/mgmt/tm/gtm/pool/a".format(
             self.client.provider['server'],
             self.client.provider['server_port'],
         )
-        query = "?expandSubcollections=true"
+        query = "?expandSubcollections=true&$top=5&$skip={0}&$filter=partition+eq+{1}".format(
+            skip,
+            self.module.params['partition']
+        )
         resp = self.client.api.get(uri + query)
         try:
             response = resp.json()
@@ -10132,18 +10263,32 @@ class GtmAaaaPoolsFactManager(BaseManager):
 
     def read_facts(self):
         results = []
-        collection = self.read_collection_from_device()
+        collection = self.increment_read()
         for resource in collection:
             params = GtmXPoolsParameters(params=resource)
             results.append(params)
         return results
 
-    def read_collection_from_device(self):
+    def increment_read(self):
+        n = 0
+        result = []
+        while True:
+            items = self.read_collection_from_device(skip=n)
+            if not items:
+                break
+            result.extend(items)
+            n = n + 5
+        return result
+
+    def read_collection_from_device(self, skip=0):
         uri = "https://{0}:{1}/mgmt/tm/gtm/pool/aaaa".format(
             self.client.provider['server'],
             self.client.provider['server_port'],
         )
-        query = "?expandSubcollections=true"
+        query = "?expandSubcollections=true&$top=5&$skip={0}&$filter=partition+eq+{1}".format(
+            skip,
+            self.module.params['partition']
+        )
         resp = self.client.api.get(uri + query)
         try:
             response = resp.json()
@@ -10183,18 +10328,32 @@ class GtmCnamePoolsFactManager(BaseManager):
 
     def read_facts(self):
         results = []
-        collection = self.read_collection_from_device()
+        collection = self.increment_read()
         for resource in collection:
             params = GtmXPoolsParameters(params=resource)
             results.append(params)
         return results
 
-    def read_collection_from_device(self):
+    def increment_read(self):
+        n = 0
+        result = []
+        while True:
+            items = self.read_collection_from_device(skip=n)
+            if not items:
+                break
+            result.extend(items)
+            n = n + 5
+        return result
+
+    def read_collection_from_device(self, skip=0):
         uri = "https://{0}:{1}/mgmt/tm/gtm/pool/cname".format(
             self.client.provider['server'],
             self.client.provider['server_port'],
         )
-        query = "?expandSubcollections=true"
+        query = "?expandSubcollections=true&$top=5&$skip={0}&$filter=partition+eq+{1}".format(
+            skip,
+            self.module.params['partition']
+        )
         resp = self.client.api.get(uri + query)
         try:
             response = resp.json()
@@ -10234,18 +10393,32 @@ class GtmMxPoolsFactManager(BaseManager):
 
     def read_facts(self):
         results = []
-        collection = self.read_collection_from_device()
+        collection = self.increment_read()
         for resource in collection:
             params = GtmXPoolsParameters(params=resource)
             results.append(params)
         return results
 
-    def read_collection_from_device(self):
+    def increment_read(self):
+        n = 0
+        result = []
+        while True:
+            items = self.read_collection_from_device(skip=n)
+            if not items:
+                break
+            result.extend(items)
+            n = n + 5
+        return result
+
+    def read_collection_from_device(self, skip=0):
         uri = "https://{0}:{1}/mgmt/tm/gtm/pool/mx".format(
             self.client.provider['server'],
             self.client.provider['server_port'],
         )
-        query = "?expandSubcollections=true"
+        query = "?expandSubcollections=true&$top=5&$skip={0}&$filter=partition+eq+{1}".format(
+            skip,
+            self.module.params['partition']
+        )
         resp = self.client.api.get(uri + query)
         try:
             response = resp.json()
@@ -10285,18 +10458,32 @@ class GtmNaptrPoolsFactManager(BaseManager):
 
     def read_facts(self):
         results = []
-        collection = self.read_collection_from_device()
+        collection = self.increment_read()
         for resource in collection:
             params = GtmXPoolsParameters(params=resource)
             results.append(params)
         return results
 
-    def read_collection_from_device(self):
+    def increment_read(self):
+        n = 0
+        result = []
+        while True:
+            items = self.read_collection_from_device(skip=n)
+            if not items:
+                break
+            result.extend(items)
+            n = n + 5
+        return result
+
+    def read_collection_from_device(self, skip=0):
         uri = "https://{0}:{1}/mgmt/tm/gtm/pool/naptr".format(
             self.client.provider['server'],
             self.client.provider['server_port'],
         )
-        query = "?expandSubcollections=true"
+        query = "?expandSubcollections=true&$top=5&$skip={0}&$filter=partition+eq+{1}".format(
+            skip,
+            self.module.params['partition']
+        )
         resp = self.client.api.get(uri + query)
         try:
             response = resp.json()
@@ -10336,18 +10523,32 @@ class GtmSrvPoolsFactManager(BaseManager):
 
     def read_facts(self):
         results = []
-        collection = self.read_collection_from_device()
+        collection = self.increment_read()
         for resource in collection:
             params = GtmXPoolsParameters(params=resource)
             results.append(params)
         return results
 
-    def read_collection_from_device(self):
+    def increment_read(self):
+        n = 0
+        result = []
+        while True:
+            items = self.read_collection_from_device(skip=n)
+            if not items:
+                break
+            result.extend(items)
+            n = n + 5
+        return result
+
+    def read_collection_from_device(self, skip=0):
         uri = "https://{0}:{1}/mgmt/tm/gtm/pool/srv".format(
             self.client.provider['server'],
             self.client.provider['server_port'],
         )
-        query = "?expandSubcollections=true"
+        query = "?expandSubcollections=true&$top=5&$skip={0}&$filter=partition+eq+{1}".format(
+            skip,
+            self.module.params['partition']
+        )
         resp = self.client.api.get(uri + query)
         try:
             response = resp.json()
@@ -10420,6 +10621,57 @@ class GtmServersParameters(BaseParameters):
         'devices',
         'virtual_servers',
     ]
+
+    def _remove_internal_keywords(self, resource, stats=False):
+        if stats:
+            resource.pop('kind', None)
+            resource.pop('generation', None)
+            resource.pop('isSubcollection', None)
+            resource.pop('fullPath', None)
+        else:
+            resource.pop('kind', None)
+            resource.pop('generation', None)
+            resource.pop('selfLink', None)
+            resource.pop('isSubcollection', None)
+            resource.pop('fullPath', None)
+
+    def _read_virtual_stats_from_device(self, url):
+        uri = "https://{0}:{1}{2}/stats".format(
+            self.client.provider['server'],
+            self.client.provider['server_port'],
+            url
+        )
+        resp = self.client.api.get(uri)
+        try:
+            response = resp.json()
+        except ValueError as ex:
+            raise F5ModuleError(str(ex))
+
+        if resp.status not in [200, 201] or 'code' in response and response['code'] not in [200, 201]:
+            raise F5ModuleError(resp.content)
+        result = parseStats(response)
+        try:
+            return result['stats']
+        except KeyError:
+            return {}
+
+    def _process_vs_stats(self, link):
+        result = dict()
+        item = self._read_virtual_stats_from_device(urlparse(link).path)
+        if not item:
+            return result
+        result['status'] = item['status']['availabilityState']
+        result['status_reason'] = item['status']['statusReason']
+        result['state'] = item['status']['enabledState']
+        result['bits_per_sec_in'] = item['metrics']['bitsPerSecIn']
+        result['bits_per_sec_in'] = item['metrics']['bitsPerSecOut']
+        result['pkts_per_sec_in'] = item['metrics']['pktsPerSecIn']
+        result['pkts_per_sec_out'] = item['metrics']['pktsPerSecOut']
+        result['connections'] = item['metrics']['connections']
+        result['picks'] = item['picks']
+        result['virtual_server_score'] = item['metrics']['vsScore']
+        result['uptime'] = item['uptime']
+        return result
 
     @property
     def monitors(self):
@@ -10504,7 +10756,10 @@ class GtmServersParameters(BaseParameters):
         if self._values['virtual_servers'] is None or 'items' not in self._values['virtual_servers']:
             return result
         for item in self._values['virtual_servers']['items']:
+            self._remove_internal_keywords(item, stats=True)
+            stats = self._process_vs_stats(item['selfLink'])
             self._remove_internal_keywords(item)
+            item['stats'] = stats
             if 'disabled' in item:
                 if item['disabled'] in BOOLEANS_TRUE:
                     item['disabled'] = flatten_boolean(item['disabled'])
@@ -10589,18 +10844,33 @@ class GtmServersFactManager(BaseManager):
 
     def read_facts(self):
         results = []
-        collection = self.read_collection_from_device()
+        collection = self.increment_read()
         for resource in collection:
-            params = GtmServersParameters(params=resource)
+            params = GtmServersParameters(client=self.client, params=resource)
             results.append(params)
         return results
 
-    def read_collection_from_device(self):
+    def increment_read(self):
+        n = 0
+        result = []
+        while True:
+            items = self.read_collection_from_device(skip=n)
+            if not items:
+                break
+            result.extend(items)
+            n = n + 5
+        return result
+
+    def read_collection_from_device(self, skip=0):
         uri = "https://{0}:{1}/mgmt/tm/gtm/server".format(
             self.client.provider['server'],
             self.client.provider['server_port'],
         )
-        resp = self.client.api.get(uri)
+        query = "?expandSubcollections=true&$top=5&$skip={0}&$filter=partition+eq+{1}".format(
+            skip,
+            self.module.params['partition']
+        )
+        resp = self.client.api.get(uri + query)
         try:
             response = resp.json()
         except ValueError as ex:
@@ -10713,18 +10983,30 @@ class GtmAWideIpsFactManager(BaseManager):
 
     def read_facts(self):
         results = []
-        collection = self.read_collection_from_device()
+        collection = self.increment_read()
         for resource in collection:
             params = GtmXWideIpsParameters(params=resource)
             results.append(params)
         return results
 
-    def read_collection_from_device(self):
+    def increment_read(self):
+        n = 0
+        result = []
+        while True:
+            items = self.read_collection_from_device(skip=n)
+            if not items:
+                break
+            result.extend(items)
+            n = n + 5
+        return result
+
+    def read_collection_from_device(self, skip=0):
         uri = "https://{0}:{1}/mgmt/tm/gtm/wideip/a".format(
             self.client.provider['server'],
             self.client.provider['server_port'],
         )
-        resp = self.client.api.get(uri)
+        query = "?$top=5&$skip={0}&$filter=partition+eq+{1}".format(skip, self.module.params['partition'])
+        resp = self.client.api.get(uri + query)
         try:
             response = resp.json()
         except ValueError as ex:
@@ -10763,18 +11045,30 @@ class GtmAaaaWideIpsFactManager(BaseManager):
 
     def read_facts(self):
         results = []
-        collection = self.read_collection_from_device()
+        collection = self.increment_read()
         for resource in collection:
             params = GtmXWideIpsParameters(params=resource)
             results.append(params)
         return results
 
-    def read_collection_from_device(self):
+    def increment_read(self):
+        n = 0
+        result = []
+        while True:
+            items = self.read_collection_from_device(skip=n)
+            if not items:
+                break
+            result.extend(items)
+            n = n + 5
+        return result
+
+    def read_collection_from_device(self, skip=0):
         uri = "https://{0}:{1}/mgmt/tm/gtm/wideip/aaaa".format(
             self.client.provider['server'],
             self.client.provider['server_port'],
         )
-        resp = self.client.api.get(uri)
+        query = "?$top=5&$skip={0}&$filter=partition+eq+{1}".format(skip, self.module.params['partition'])
+        resp = self.client.api.get(uri + query)
         try:
             response = resp.json()
         except ValueError as ex:
@@ -10813,18 +11107,30 @@ class GtmCnameWideIpsFactManager(BaseManager):
 
     def read_facts(self):
         results = []
-        collection = self.read_collection_from_device()
+        collection = self.increment_read()
         for resource in collection:
             params = GtmXWideIpsParameters(params=resource)
             results.append(params)
         return results
 
-    def read_collection_from_device(self):
+    def increment_read(self):
+        n = 0
+        result = []
+        while True:
+            items = self.read_collection_from_device(skip=n)
+            if not items:
+                break
+            result.extend(items)
+            n = n + 5
+        return result
+
+    def read_collection_from_device(self, skip=0):
         uri = "https://{0}:{1}/mgmt/tm/gtm/wideip/cname".format(
             self.client.provider['server'],
             self.client.provider['server_port'],
         )
-        resp = self.client.api.get(uri)
+        query = "?$top=5&$skip={0}&$filter=partition+eq+{1}".format(skip, self.module.params['partition'])
+        resp = self.client.api.get(uri + query)
         try:
             response = resp.json()
         except ValueError as ex:
@@ -10863,18 +11169,30 @@ class GtmMxWideIpsFactManager(BaseManager):
 
     def read_facts(self):
         results = []
-        collection = self.read_collection_from_device()
+        collection = self.increment_read()
         for resource in collection:
             params = GtmXWideIpsParameters(params=resource)
             results.append(params)
         return results
 
-    def read_collection_from_device(self):
+    def increment_read(self):
+        n = 0
+        result = []
+        while True:
+            items = self.read_collection_from_device(skip=n)
+            if not items:
+                break
+            result.extend(items)
+            n = n + 5
+        return result
+
+    def read_collection_from_device(self, skip=0):
         uri = "https://{0}:{1}/mgmt/tm/gtm/wideip/mx".format(
             self.client.provider['server'],
             self.client.provider['server_port'],
         )
-        resp = self.client.api.get(uri)
+        query = "?$top=5&$skip={0}&$filter=partition+eq+{1}".format(skip, self.module.params['partition'])
+        resp = self.client.api.get(uri + query)
         try:
             response = resp.json()
         except ValueError as ex:
@@ -10913,18 +11231,30 @@ class GtmNaptrWideIpsFactManager(BaseManager):
 
     def read_facts(self):
         results = []
-        collection = self.read_collection_from_device()
+        collection = self.increment_read()
         for resource in collection:
             params = GtmXWideIpsParameters(params=resource)
             results.append(params)
         return results
 
-    def read_collection_from_device(self):
+    def increment_read(self):
+        n = 0
+        result = []
+        while True:
+            items = self.read_collection_from_device(skip=n)
+            if not items:
+                break
+            result.extend(items)
+            n = n + 5
+        return result
+
+    def read_collection_from_device(self, skip=0):
         uri = "https://{0}:{1}/mgmt/tm/gtm/wideip/naptr".format(
             self.client.provider['server'],
             self.client.provider['server_port'],
         )
-        resp = self.client.api.get(uri)
+        query = "?$top=5&$skip={0}&$filter=partition+eq+{1}".format(skip, self.module.params['partition'])
+        resp = self.client.api.get(uri + query)
         try:
             response = resp.json()
         except ValueError as ex:
@@ -10963,18 +11293,30 @@ class GtmSrvWideIpsFactManager(BaseManager):
 
     def read_facts(self):
         results = []
-        collection = self.read_collection_from_device()
+        collection = self.increment_read()
         for resource in collection:
             params = GtmXWideIpsParameters(params=resource)
             results.append(params)
         return results
 
-    def read_collection_from_device(self):
+    def increment_read(self):
+        n = 0
+        result = []
+        while True:
+            items = self.read_collection_from_device(skip=n)
+            if not items:
+                break
+            result.extend(items)
+            n = n + 5
+        return result
+
+    def read_collection_from_device(self, skip=0):
         uri = "https://{0}:{1}/mgmt/tm/gtm/wideip/srv".format(
             self.client.provider['server'],
             self.client.provider['server_port'],
         )
-        resp = self.client.api.get(uri)
+        query = "?$top=5&$skip={0}&$filter=partition+eq+{1}".format(skip, self.module.params['partition'])
+        resp = self.client.api.get(uri + query)
         try:
             response = resp.json()
         except ValueError as ex:
@@ -11052,18 +11394,30 @@ class GtmTopologyRegionFactManager(BaseManager):
 
     def read_facts(self):
         results = []
-        collection = self.read_collection_from_device()
+        collection = self.increment_read()
         for resource in collection:
             params = GtmTopologyRegionParameters(params=resource)
             results.append(params)
         return results
 
-    def read_collection_from_device(self):
+    def increment_read(self):
+        n = 0
+        result = []
+        while True:
+            items = self.read_collection_from_device(skip=n)
+            if not items:
+                break
+            result.extend(items)
+            n = n + 5
+        return result
+
+    def read_collection_from_device(self, skip=0):
         uri = "https://{0}:{1}/mgmt/tm/gtm/region".format(
             self.client.provider['server'],
             self.client.provider['server_port'],
         )
-        resp = self.client.api.get(uri)
+        query = "?$top=5&$skip={0}&$filter=partition+eq+{1}".format(skip, self.module.params['partition'])
+        resp = self.client.api.get(uri + query)
         try:
             response = resp.json()
         except ValueError as ex:
@@ -11165,18 +11519,30 @@ class HttpMonitorsFactManager(BaseManager):
 
     def read_facts(self):
         results = []
-        collection = self.read_collection_from_device()
+        collection = self.increment_read()
         for resource in collection:
             params = HttpMonitorsParameters(params=resource)
             results.append(params)
         return results
 
-    def read_collection_from_device(self):
+    def increment_read(self):
+        n = 0
+        result = []
+        while True:
+            items = self.read_collection_from_device(skip=n)
+            if not items:
+                break
+            result.extend(items)
+            n = n + 5
+        return result
+
+    def read_collection_from_device(self, skip=0):
         uri = "https://{0}:{1}/mgmt/tm/ltm/monitor/http".format(
             self.client.provider['server'],
             self.client.provider['server_port'],
         )
-        resp = self.client.api.get(uri)
+        query = "?$top=5&$skip={0}&$filter=partition+eq+{1}".format(skip, self.module.params['partition'])
+        resp = self.client.api.get(uri + query)
         try:
             response = resp.json()
         except ValueError as ex:
@@ -11278,18 +11644,30 @@ class HttpsMonitorsFactManager(BaseManager):
 
     def read_facts(self):
         results = []
-        collection = self.read_collection_from_device()
+        collection = self.increment_read()
         for resource in collection:
             params = HttpsMonitorsParameters(params=resource)
             results.append(params)
         return results
 
-    def read_collection_from_device(self):
+    def increment_read(self):
+        n = 0
+        result = []
+        while True:
+            items = self.read_collection_from_device(skip=n)
+            if not items:
+                break
+            result.extend(items)
+            n = n + 5
+        return result
+
+    def read_collection_from_device(self, skip=0):
         uri = "https://{0}:{1}/mgmt/tm/ltm/monitor/https".format(
             self.client.provider['server'],
             self.client.provider['server_port'],
         )
-        resp = self.client.api.get(uri)
+        query = "?$top=5&$skip={0}&$filter=partition+eq+{1}".format(skip, self.module.params['partition'])
+        resp = self.client.api.get(uri + query)
         try:
             response = resp.json()
         except ValueError as ex:
@@ -11528,18 +11906,30 @@ class HttpProfilesFactManager(BaseManager):
 
     def read_facts(self):
         results = []
-        collection = self.read_collection_from_device()
+        collection = self.increment_read()
         for resource in collection:
             params = HttpProfilesParameters(params=resource)
             results.append(params)
         return results
 
-    def read_collection_from_device(self):
+    def increment_read(self):
+        n = 0
+        result = []
+        while True:
+            items = self.read_collection_from_device(skip=n)
+            if not items:
+                break
+            result.extend(items)
+            n = n + 5
+        return result
+
+    def read_collection_from_device(self, skip=0):
         uri = "https://{0}:{1}/mgmt/tm/ltm/profile/http".format(
             self.client.provider['server'],
             self.client.provider['server_port'],
         )
-        resp = self.client.api.get(uri)
+        query = "?$top=5&$skip={0}&$filter=partition+eq+{1}".format(skip, self.module.params['partition'])
+        resp = self.client.api.get(uri + query)
         try:
             response = resp.json()
         except ValueError as ex:
@@ -11626,18 +12016,30 @@ class IappServicesFactManager(BaseManager):
 
     def read_facts(self):
         results = []
-        collection = self.read_collection_from_device()
+        collection = self.increment_read()
         for resource in collection:
             params = IappServicesParameters(params=resource)
             results.append(params)
         return results
 
-    def read_collection_from_device(self):
+    def increment_read(self):
+        n = 0
+        result = []
+        while True:
+            items = self.read_collection_from_device(skip=n)
+            if not items:
+                break
+            result.extend(items)
+            n = n + 5
+        return result
+
+    def read_collection_from_device(self, skip=0):
         uri = "https://{0}:{1}/mgmt/tm/sys/application/service".format(
             self.client.provider['server'],
             self.client.provider['server_port'],
         )
-        resp = self.client.api.get(uri)
+        query = "?$top=5&$skip={0}&$filter=partition+eq+{1}".format(skip, self.module.params['partition'])
+        resp = self.client.api.get(uri + query)
         try:
             response = resp.json()
         except ValueError as ex:
@@ -11826,18 +12228,30 @@ class IcmpMonitorsFactManager(BaseManager):
 
     def read_facts(self):
         results = []
-        collection = self.read_collection_from_device()
+        collection = self.increment_read()
         for resource in collection:
             params = IcmpMonitorsParameters(params=resource)
             results.append(params)
         return results
 
-    def read_collection_from_device(self):
+    def increment_read(self):
+        n = 0
+        result = []
+        while True:
+            items = self.read_collection_from_device(skip=n)
+            if not items:
+                break
+            result.extend(items)
+            n = n + 5
+        return result
+
+    def read_collection_from_device(self, skip=0):
         uri = "https://{0}:{1}/mgmt/tm/ltm/monitor/icmp".format(
             self.client.provider['server'],
             self.client.provider['server_port'],
         )
-        resp = self.client.api.get(uri)
+        query = "?$top=5&$skip={0}&$filter=partition+eq+{1}".format(skip, self.module.params['partition'])
+        resp = self.client.api.get(uri + query)
         try:
             response = resp.json()
         except ValueError as ex:
@@ -11945,18 +12359,30 @@ class InterfacesFactManager(BaseManager):
 
     def read_facts(self):
         results = []
-        collection = self.read_collection_from_device()
+        collection = self.increment_read()
         for resource in collection:
             params = InterfacesParameters(params=resource)
             results.append(params)
         return results
 
-    def read_collection_from_device(self):
+    def increment_read(self):
+        n = 0
+        result = []
+        while True:
+            items = self.read_collection_from_device(skip=n)
+            if not items:
+                break
+            result.extend(items)
+            n = n + 5
+        return result
+
+    def read_collection_from_device(self, skip=0):
         uri = "https://{0}:{1}/mgmt/tm/net/interface".format(
             self.client.provider['server'],
             self.client.provider['server_port'],
         )
-        resp = self.client.api.get(uri)
+        query = "?$top=5&$skip={0}".format(skip)
+        resp = self.client.api.get(uri + query)
         try:
             response = resp.json()
         except ValueError as ex:
@@ -12006,18 +12432,30 @@ class InternalDataGroupsFactManager(BaseManager):
 
     def read_facts(self):
         results = []
-        collection = self.read_collection_from_device()
+        collection = self.increment_read()
         for resource in collection:
             params = InternalDataGroupsParameters(params=resource)
             results.append(params)
         return results
 
-    def read_collection_from_device(self):
+    def increment_read(self):
+        n = 0
+        result = []
+        while True:
+            items = self.read_collection_from_device(skip=n)
+            if not items:
+                break
+            result.extend(items)
+            n = n + 5
+        return result
+
+    def read_collection_from_device(self, skip=0):
         uri = "https://{0}:{1}/mgmt/tm/ltm/data-group/internal".format(
             self.client.provider['server'],
             self.client.provider['server_port'],
         )
-        resp = self.client.api.get(uri)
+        query = "?$top=5&$skip={0}&$filter=partition+eq+{1}".format(skip, self.module.params['partition'])
+        resp = self.client.api.get(uri + query)
         try:
             response = resp.json()
         except ValueError as ex:
@@ -12103,18 +12541,30 @@ class IrulesFactManager(BaseManager):
 
     def read_facts(self):
         results = []
-        collection = self.read_collection_from_device()
+        collection = self.increment_read()
         for resource in collection:
             params = IrulesParameters(params=resource)
             results.append(params)
         return results
 
-    def read_collection_from_device(self):
+    def increment_read(self):
+        n = 0
+        result = []
+        while True:
+            items = self.read_collection_from_device(skip=n)
+            if not items:
+                break
+            result.extend(items)
+            n = n + 5
+        return result
+
+    def read_collection_from_device(self, skip=0):
         uri = "https://{0}:{1}/mgmt/tm/ltm/rule".format(
             self.client.provider['server'],
             self.client.provider['server_port'],
         )
-        resp = self.client.api.get(uri)
+        query = "?$top=5&$skip={0}&$filter=partition+eq+{1}".format(skip, self.module.params['partition'])
+        resp = self.client.api.get(uri + query)
         try:
             response = resp.json()
         except ValueError as ex:
@@ -12458,7 +12908,7 @@ class LtmPoolsFactManager(BaseManager):
 
     def read_facts(self):
         results = []
-        collection = self.read_collection_from_device()
+        collection = self.increment_read()
         for resource in collection:
             attrs = resource
             members = self.read_member_from_device(attrs['fullPath'])
@@ -12468,7 +12918,18 @@ class LtmPoolsFactManager(BaseManager):
             results.append(params)
         return results
 
-    def read_collection_from_device(self):
+    def increment_read(self):
+        n = 0
+        result = []
+        while True:
+            items = self.read_collection_from_device(skip=n)
+            if not items:
+                break
+            result.extend(items)
+            n = n + 5
+        return result
+
+    def read_collection_from_device(self, skip=0):
         """Read the LTM pools collection from the device
 
         Note that sub-collection expansion does not work with LTM pools. Therefore,
@@ -12483,7 +12944,8 @@ class LtmPoolsFactManager(BaseManager):
             self.client.provider['server'],
             self.client.provider['server_port'],
         )
-        resp = self.client.api.get(uri)
+        query = "?$top=5&$skip={0}&$filter=partition+eq+{1}".format(skip, self.module.params['partition'])
+        resp = self.client.api.get(uri + query)
         try:
             response = resp.json()
         except ValueError as ex:
@@ -12634,18 +13096,32 @@ class LtmPolicyFactManager(BaseManager):
 
     def read_facts(self):
         results = []
-        collection = self.read_collection_from_device()
+        collection = self.increment_read()
         for resource in collection:
             params = LtmPolicyParameters(params=resource)
             results.append(params)
         return results
 
-    def read_collection_from_device(self):
+    def increment_read(self):
+        n = 0
+        result = []
+        while True:
+            items = self.read_collection_from_device(skip=n)
+            if not items:
+                break
+            result.extend(items)
+            n = n + 5
+        return result
+
+    def read_collection_from_device(self, skip=0):
         uri = "https://{0}:{1}/mgmt/tm/ltm/policy/".format(
             self.client.provider['server'],
             self.client.provider['server_port'],
         )
-        query = "?expandSubcollections=true"
+        query = "?expandSubcollections=true&$top=5&$skip={0}&$filter=partition+eq+{1}".format(
+            skip,
+            self.module.params['partition']
+        )
         resp = self.client.api.get(uri + query)
         try:
             response = resp.json()
@@ -12766,7 +13242,7 @@ class NodesFactManager(BaseManager):
 
     def read_facts(self):
         results = []
-        collection = self.read_collection_from_device()
+        collection = self.increment_read()
         for resource in collection:
             attrs = resource
             attrs['stats'] = self.read_stats_from_device(attrs['fullPath'])
@@ -12774,12 +13250,24 @@ class NodesFactManager(BaseManager):
             results.append(params)
         return results
 
-    def read_collection_from_device(self):
+    def increment_read(self):
+        n = 0
+        result = []
+        while True:
+            items = self.read_collection_from_device(skip=n)
+            if not items:
+                break
+            result.extend(items)
+            n = n + 5
+        return result
+
+    def read_collection_from_device(self, skip=0):
         uri = "https://{0}:{1}/mgmt/tm/ltm/node".format(
             self.client.provider['server'],
             self.client.provider['server_port'],
         )
-        resp = self.client.api.get(uri)
+        query = "?$top=5&$skip={0}&$filter=partition+eq+{1}".format(skip, self.module.params['partition'])
+        resp = self.client.api.get(uri + query)
         try:
             response = resp.json()
         except ValueError as ex:
@@ -12886,18 +13374,30 @@ class OneConnectProfilesFactManager(BaseManager):
 
     def read_facts(self):
         results = []
-        collection = self.read_collection_from_device()
+        collection = self.increment_read()
         for resource in collection:
             params = OneConnectProfilesParameters(params=resource)
             results.append(params)
         return results
 
-    def read_collection_from_device(self):
+    def increment_read(self):
+        n = 0
+        result = []
+        while True:
+            items = self.read_collection_from_device(skip=n)
+            if not items:
+                break
+            result.extend(items)
+            n = n + 5
+        return result
+
+    def read_collection_from_device(self, skip=0):
         uri = "https://{0}:{1}/mgmt/tm/ltm/profile/one-connect".format(
             self.client.provider['server'],
             self.client.provider['server_port'],
         )
-        resp = self.client.api.get(uri)
+        query = "?$top=5&$skip={0}&$filter=partition+eq+{1}".format(skip, self.module.params['partition'])
+        resp = self.client.api.get(uri + query)
         try:
             response = resp.json()
         except ValueError as ex:
@@ -13104,18 +13604,30 @@ class RouteDomainFactManager(BaseManager):
 
     def read_facts(self):
         results = []
-        collection = self.read_collection_from_device()
+        collection = self.increment_read()
         for resource in collection:
             params = RouteDomainParameters(params=resource)
             results.append(params)
         return results
 
-    def read_collection_from_device(self):
+    def increment_read(self):
+        n = 0
+        result = []
+        while True:
+            items = self.read_collection_from_device(skip=n)
+            if not items:
+                break
+            result.extend(items)
+            n = n + 5
+        return result
+
+    def read_collection_from_device(self, skip=0):
         uri = "https://{0}:{1}/mgmt/tm/net/route-domain".format(
             self.client.provider['server'],
             self.client.provider['server_port'],
         )
-        resp = self.client.api.get(uri)
+        query = "?$top=5&$skip={0}&$filter=partition+eq+{1}".format(skip, self.module.params['partition'])
+        resp = self.client.api.get(uri + query)
         try:
             response = resp.json()
         except ValueError as ex:
@@ -13216,18 +13728,30 @@ class SelfIpsFactManager(BaseManager):
 
     def read_facts(self):
         results = []
-        collection = self.read_collection_from_device()
+        collection = self.increment_read()
         for resource in collection:
             params = SelfIpsParameters(params=resource)
             results.append(params)
         return results
 
-    def read_collection_from_device(self):
+    def increment_read(self):
+        n = 0
+        result = []
+        while True:
+            items = self.read_collection_from_device(skip=n)
+            if not items:
+                break
+            result.extend(items)
+            n = n + 5
+        return result
+
+    def read_collection_from_device(self, skip=0):
         uri = "https://{0}:{1}/mgmt/tm/net/self".format(
             self.client.provider['server'],
             self.client.provider['server_port'],
         )
-        resp = self.client.api.get(uri)
+        query = "?$top=5&$skip={0}&$filter=partition+eq+{1}".format(skip, self.module.params['partition'])
+        resp = self.client.api.get(uri + query)
         try:
             response = resp.json()
         except ValueError as ex:
@@ -13381,8 +13905,10 @@ class ServerSslProfilesParameters(BaseParameters):
 
     @property
     def cipher_group(self):
-        if self._values['cipher_group'] in [None, 'none']:
+        if self._values['cipher_group'] is None:
             return None
+        if self._values['cipher_group'] == 'none':
+            return 'none'
         return self._values['cipher_group']
 
     @property
@@ -13520,18 +14046,30 @@ class ServerSslProfilesFactManager(BaseManager):
 
     def read_facts(self):
         results = []
-        collection = self.read_collection_from_device()
+        collection = self.increment_read()
         for resource in collection:
             params = ServerSslProfilesParameters(params=resource)
             results.append(params)
         return results
 
-    def read_collection_from_device(self):
+    def increment_read(self):
+        n = 0
+        result = []
+        while True:
+            items = self.read_collection_from_device(skip=n)
+            if not items:
+                break
+            result.extend(items)
+            n = n + 5
+        return result
+
+    def read_collection_from_device(self, skip=0):
         uri = "https://{0}:{1}/mgmt/tm/ltm/profile/server-ssl".format(
             self.client.provider['server'],
             self.client.provider['server_port'],
         )
-        resp = self.client.api.get(uri)
+        query = "?$top=5&$skip={0}&$filter=partition+eq+{1}".format(skip, self.module.params['partition'])
+        resp = self.client.api.get(uri + query)
         try:
             response = resp.json()
         except ValueError as ex:
@@ -13896,18 +14434,30 @@ class SslCertificatesFactManager(BaseManager):
 
     def read_facts(self):
         results = []
-        collection = self.read_collection_from_device()
+        collection = self.increment_read()
         for resource in collection:
             params = SslCertificatesParameters(params=resource)
             results.append(params)
         return results
 
-    def read_collection_from_device(self):
+    def increment_read(self):
+        n = 0
+        result = []
+        while True:
+            items = self.read_collection_from_device(skip=n)
+            if not items:
+                break
+            result.extend(items)
+            n = n + 5
+        return result
+
+    def read_collection_from_device(self, skip=0):
         uri = "https://{0}:{1}/mgmt/tm/sys/file/ssl-cert".format(
             self.client.provider['server'],
             self.client.provider['server_port'],
         )
-        resp = self.client.api.get(uri)
+        query = "?$top=5&$skip={0}&$filter=partition+eq+{1}".format(skip, self.module.params['partition'])
+        resp = self.client.api.get(uri + query)
         try:
             response = resp.json()
         except ValueError as ex:
@@ -13972,18 +14522,30 @@ class SslKeysFactManager(BaseManager):
 
     def read_facts(self):
         results = []
-        collection = self.read_collection_from_device()
+        collection = self.increment_read()
         for resource in collection:
             params = SslKeysParameters(params=resource)
             results.append(params)
         return results
 
-    def read_collection_from_device(self):
+    def increment_read(self):
+        n = 0
+        result = []
+        while True:
+            items = self.read_collection_from_device(skip=n)
+            if not items:
+                break
+            result.extend(items)
+            n = n + 5
+        return result
+
+    def read_collection_from_device(self, skip=0):
         uri = "https://{0}:{1}/mgmt/tm/sys/file/ssl-key".format(
             self.client.provider['server'],
             self.client.provider['server_port'],
         )
-        resp = self.client.api.get(uri)
+        query = "?$top=5&$skip={0}&$filter=partition+eq+{1}".format(skip, self.module.params['partition'])
+        resp = self.client.api.get(uri + query)
         try:
             response = resp.json()
         except ValueError as ex:
@@ -14744,18 +15306,30 @@ class TcpMonitorsFactManager(BaseManager):
 
     def read_facts(self):
         results = []
-        collection = self.read_collection_from_device()
+        collection = self.increment_read()
         for resource in collection:
             params = TcpMonitorsParameters(params=resource)
             results.append(params)
         return results
 
-    def read_collection_from_device(self):
+    def increment_read(self):
+        n = 0
+        result = []
+        while True:
+            items = self.read_collection_from_device(skip=n)
+            if not items:
+                break
+            result.extend(items)
+            n = n + 5
+        return result
+
+    def read_collection_from_device(self, skip=0):
         uri = "https://{0}:{1}/mgmt/tm/ltm/monitor/tcp".format(
             self.client.provider['server'],
             self.client.provider['server_port'],
         )
-        resp = self.client.api.get(uri)
+        query = "?$top=5&$skip={0}&$filter=partition+eq+{1}".format(skip, self.module.params['partition'])
+        resp = self.client.api.get(uri + query)
         try:
             response = resp.json()
         except ValueError as ex:
@@ -14830,18 +15404,30 @@ class TcpHalfOpenMonitorsFactManager(BaseManager):
 
     def read_facts(self):
         results = []
-        collection = self.read_collection_from_device()
+        collection = self.increment_read()
         for resource in collection:
             params = TcpHalfOpenMonitorsParameters(params=resource)
             results.append(params)
         return results
 
-    def read_collection_from_device(self):
+    def increment_read(self):
+        n = 0
+        result = []
+        while True:
+            items = self.read_collection_from_device(skip=n)
+            if not items:
+                break
+            result.extend(items)
+            n = n + 5
+        return result
+
+    def read_collection_from_device(self, skip=0):
         uri = "https://{0}:{1}/mgmt/tm/ltm/monitor/tcp-half-open".format(
             self.client.provider['server'],
             self.client.provider['server_port'],
         )
-        resp = self.client.api.get(uri)
+        query = "?$top=5&$skip={0}&$filter=partition+eq+{1}".format(skip, self.module.params['partition'])
+        resp = self.client.api.get(uri + query)
         try:
             response = resp.json()
         except ValueError as ex:
@@ -15253,18 +15839,30 @@ class TcpProfilesFactManager(BaseManager):
 
     def read_facts(self):
         results = []
-        collection = self.read_collection_from_device()
+        collection = self.increment_read()
         for resource in collection:
             params = TcpProfilesParameters(params=resource)
             results.append(params)
         return results
 
-    def read_collection_from_device(self):
+    def increment_read(self):
+        n = 0
+        result = []
+        while True:
+            items = self.read_collection_from_device(skip=n)
+            if not items:
+                break
+            result.extend(items)
+            n = n + 5
+        return result
+
+    def read_collection_from_device(self, skip=0):
         uri = "https://{0}:{1}/mgmt/tm/ltm/profile/tcp".format(
             self.client.provider['server'],
             self.client.provider['server_port'],
         )
-        resp = self.client.api.get(uri)
+        query = "?$top=5&$skip={0}&$filter=partition+eq+{1}".format(skip, self.module.params['partition'])
+        resp = self.client.api.get(uri + query)
         try:
             response = resp.json()
         except ValueError as ex:
@@ -15355,7 +15953,7 @@ class TrafficGroupsFactManager(BaseManager):
 
     def read_facts(self):
         results = []
-        collection = self.read_collection_from_device()
+        collection = self.increment_read()
         for resource in collection:
             attrs = resource
             attrs['stats'] = self.read_stats_from_device(attrs['fullPath'])
@@ -15363,12 +15961,24 @@ class TrafficGroupsFactManager(BaseManager):
             results.append(params)
         return results
 
-    def read_collection_from_device(self):
+    def increment_read(self):
+        n = 0
+        result = []
+        while True:
+            items = self.read_collection_from_device(skip=n)
+            if not items:
+                break
+            result.extend(items)
+            n = n + 5
+        return result
+
+    def read_collection_from_device(self, skip=0):
         uri = "https://{0}:{1}/mgmt/tm/cm/traffic-group".format(
             self.client.provider['server'],
             self.client.provider['server_port'],
         )
-        resp = self.client.api.get(uri)
+        query = "?$top=5&$skip={0}&$filter=partition+eq+{1}".format(skip, self.module.params['partition'])
+        resp = self.client.api.get(uri + query)
         try:
             response = resp.json()
         except ValueError as ex:
@@ -15478,7 +16088,7 @@ class TrunksFactManager(BaseManager):
 
     def read_facts(self):
         results = []
-        collection = self.read_collection_from_device()
+        collection = self.increment_read()
         for resource in collection:
             attrs = resource
             attrs['stats'] = self.read_stats_from_device(attrs['fullPath'])
@@ -15486,12 +16096,24 @@ class TrunksFactManager(BaseManager):
             results.append(params)
         return results
 
-    def read_collection_from_device(self):
+    def increment_read(self):
+        n = 0
+        result = []
+        while True:
+            items = self.read_collection_from_device(skip=n)
+            if not items:
+                break
+            result.extend(items)
+            n = n + 5
+        return result
+
+    def read_collection_from_device(self, skip=0):
         uri = "https://{0}:{1}/mgmt/tm/net/trunk".format(
             self.client.provider['server'],
             self.client.provider['server_port'],
         )
-        resp = self.client.api.get(uri)
+        query = "?$top=5&$skip={0}".format(skip)
+        resp = self.client.api.get(uri + query)
         try:
             response = resp.json()
         except ValueError as ex:
@@ -15692,18 +16314,30 @@ class UdpProfilesFactManager(BaseManager):
 
     def read_facts(self):
         results = []
-        collection = self.read_collection_from_device()
+        collection = self.increment_read()
         for resource in collection:
             params = UdpProfilesParameters(params=resource)
             results.append(params)
         return results
 
-    def read_collection_from_device(self):
+    def increment_read(self):
+        n = 0
+        result = []
+        while True:
+            items = self.read_collection_from_device(skip=n)
+            if not items:
+                break
+            result.extend(items)
+            n = n + 5
+        return result
+
+    def read_collection_from_device(self, skip=0):
         uri = "https://{0}:{1}/mgmt/tm/ltm/profile/udp".format(
             self.client.provider['server'],
             self.client.provider['server_port'],
         )
-        resp = self.client.api.get(uri)
+        query = "?$top=5&$skip={0}&$filter=partition+eq+{1}".format(skip, self.module.params['partition'])
+        resp = self.client.api.get(uri + query)
         try:
             response = resp.json()
         except ValueError as ex:
@@ -15894,18 +16528,30 @@ class VirtualAddressesFactManager(BaseManager):
 
     def read_facts(self):
         results = []
-        collection = self.read_collection_from_device()
+        collection = self.increment_read()
         for resource in collection:
             params = VirtualAddressesParameters(params=resource)
             results.append(params)
         return results
 
-    def read_collection_from_device(self):
+    def increment_read(self):
+        n = 0
+        result = []
+        while True:
+            items = self.read_collection_from_device(skip=n)
+            if not items:
+                break
+            result.extend(items)
+            n = n + 5
+        return result
+
+    def read_collection_from_device(self, skip=0):
         uri = "https://{0}:{1}/mgmt/tm/ltm/virtual-address".format(
             self.client.provider['server'],
             self.client.provider['server_port'],
         )
-        resp = self.client.api.get(uri)
+        query = "?$top=5&$skip={0}&$filter=partition+eq+{1}".format(skip, self.module.params['partition'])
+        resp = self.client.api.get(uri + query)
         try:
             response = resp.json()
         except ValueError as ex:
@@ -16667,7 +17313,7 @@ class VirtualServersFactManager(BaseManager):
 
     def read_facts(self):
         results = []
-        collection = self.read_collection_from_device()
+        collection = self.increment_read()
         for resource in collection:
             attrs = resource
             attrs['stats'] = self.read_stats_from_device(attrs['fullPath'])
@@ -16675,12 +17321,27 @@ class VirtualServersFactManager(BaseManager):
             results.append(params)
         return results
 
-    def read_collection_from_device(self):
-        uri = "https://{0}:{1}/mgmt/tm/ltm/virtual?expandSubcollections=true".format(
+    def increment_read(self):
+        n = 0
+        result = []
+        while True:
+            items = self.read_collection_from_device(skip=n)
+            if not items:
+                break
+            result.extend(items)
+            n = n + 5
+        return result
+
+    def read_collection_from_device(self, skip=0):
+        uri = "https://{0}:{1}/mgmt/tm/ltm/virtual".format(
             self.client.provider['server'],
             self.client.provider['server_port'],
         )
-        resp = self.client.api.get(uri)
+        query = "?expandSubcollections=true&$top=5&$skip={0}&$filter=partition+eq+{1}".format(
+            skip,
+            self.module.params["partition"]
+        )
+        resp = self.client.api.get(uri + query)
         try:
             response = resp.json()
         except ValueError as ex:
@@ -16828,7 +17489,7 @@ class VlansFactManager(BaseManager):
 
     def read_facts(self):
         results = []
-        collection = self.read_collection_from_device()
+        collection = self.increment_read()
         for resource in collection:
             attrs = resource
             attrs['stats'] = self.read_stats_from_device(attrs['fullPath'])
@@ -16836,12 +17497,27 @@ class VlansFactManager(BaseManager):
             results.append(params)
         return results
 
-    def read_collection_from_device(self):
-        uri = "https://{0}:{1}/mgmt/tm/net/vlan?expandSubcollections=true".format(
+    def increment_read(self):
+        n = 0
+        result = []
+        while True:
+            items = self.read_collection_from_device(skip=n)
+            if not items:
+                break
+            result.extend(items)
+            n = n + 10
+        return result
+
+    def read_collection_from_device(self, skip=0):
+        uri = "https://{0}:{1}/mgmt/tm/net/vlan".format(
             self.client.provider['server'],
             self.client.provider['server_port'],
         )
-        resp = self.client.api.get(uri)
+        query = "?expandSubcollections=true&$top=5&$skip={0}&$filter=partition+eq+{1}".format(
+            skip,
+            self.module.params['partition']
+        )
+        resp = self.client.api.get(uri + query)
         try:
             response = resp.json()
         except ValueError as ex:
@@ -16914,19 +17590,34 @@ class ManagementRouteFactManager(BaseManager):
 
     def read_facts(self):
         results = []
-        collection = self.read_collection_from_device()
+        collection = self.increment_read()
         for resource in collection:
             attrs = resource
             params = ManagementRouteParameters(params=attrs)
             results.append(params)
         return results
 
-    def read_collection_from_device(self):
-        uri = "https://{0}:{1}/mgmt/tm/sys/management-route?expandSubcollections=true".format(
+    def increment_read(self):
+        n = 0
+        result = []
+        while True:
+            items = self.read_collection_from_device(skip=n)
+            if not items:
+                break
+            result.extend(items)
+            n = n + 5
+        return result
+
+    def read_collection_from_device(self, skip=0):
+        uri = "https://{0}:{1}/mgmt/tm/sys/management-route".format(
             self.client.provider['server'],
             self.client.provider['server_port'],
         )
-        resp = self.client.api.get(uri)
+        query = "?expandSubcollections=true&$top=5&$skip={0}&$filter=partition+eq+{1}".format(
+            skip,
+            self.module.params['partition']
+        )
+        resp = self.client.api.get(uri + query)
         try:
             response = resp.json()
         except ValueError as ex:
@@ -17216,6 +17907,10 @@ class ArgumentSpec(object):
     def __init__(self):
         self.supports_check_mode = True
         argument_spec = dict(
+            partition=dict(
+                type="str",
+                default="Common",
+            ),
             gather_subset=dict(
                 type='list',
                 elements='str',
