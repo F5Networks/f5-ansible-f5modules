@@ -6437,8 +6437,14 @@ ucs:
       description:
         - Size of the UCS file in bytes.
       returned: queried
-      type: int
+      type: str
       sample: "3"
+    file_created_date:
+      description:
+        - Date and time when the ucs file was created.
+      returned: queried
+      type: str
+      sample: "2022-03-10T09:30:19Z"
   sample: hash/dictionary of values
   version_added: "1.15.0"
 
@@ -16196,7 +16202,8 @@ class UCSParameters(BaseParameters):
     returnables = [
         'file_name',
         'encrypted',
-        'file_size'
+        'file_size',
+        'file_created_date'
     ]
 
     @property
@@ -16213,6 +16220,11 @@ class UCSParameters(BaseParameters):
         val = self._values['variables']['file_size']
         size = re.findall(r'\d+', val)[0]
         return size
+
+    @property
+    def file_created_date(self):
+        date = self._values['variables']['file_created_date']
+        return date
 
 
 class UCSFactManager(BaseManager):
