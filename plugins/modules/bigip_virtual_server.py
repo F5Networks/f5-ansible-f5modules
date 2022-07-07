@@ -485,7 +485,7 @@ options:
     description:
       - Specifies the immediate action to take upon the receipt of the initial SYN packet if the
         availability status of the virtual server is Offline or Unavailable.
-      - Supported for the virtual server of C(standard) type and C(TCP) protocol.
+      - Supported for virtual servers with a Type of C(standard) and Protocol of C(TCP).
     type: str
     choices:
       - none
@@ -1430,8 +1430,8 @@ class ApiParameters(Parameters):
             result = 'performance-http'
         elif self.has_fastl4_profiles:
             result = 'performance-l4'
-        # elif self.has_message_routing_profiles:
-        #     result = 'message-routing'
+        elif self.has_message_routing_profiles:
+            result = 'message-routing'
         else:
             result = 'standard'
         self._values['type'] = result
