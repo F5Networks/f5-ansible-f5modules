@@ -9,6 +9,9 @@ Vagrantfile
 vault.txt
 **.cache/
 cache/
+output
+test/integration/targets/bigip_imish_config/backup
+assets/
 .plugin-cache.yaml
 
 # Byte-compiled files
@@ -22,7 +25,19 @@ docs/_modules/modules_by_category.rst
 docs/_modules/list_of_*.rst
 docs/_modules/*_module.rst
 
+devtools/docker-compose.site.yaml
 
+# intergration test files
+test/integration/inventory/hosts
+test/integration/inventory/group_vars/all.yaml
+./ansible/
+tmp/*
+!tmp/.gitkeep
+!tmp/licenses
+tmp/licenses/*
+!tmp/licenses/.gitkeep
+test/integration/targets/bigip_ucs/files/*.ucs
+examples/hosts.ini
 **/.DS_Store
 **/*.secret
 **/*.iso
@@ -89,5 +104,13 @@ fabric.properties
 # Editor-based Rest Client
 .idea/httpRequests
 
-# Ignore tests output
-tests/output
+# ansible config
+ansible.cfg
+# Environments
+ansible_py3/
+# ansible galaxy-roles
+*f5devcentral*
+# other collections
+ansible
+# ignore build artifacts
+builds/*

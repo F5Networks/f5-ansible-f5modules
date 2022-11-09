@@ -2,7 +2,7 @@ authors:
   - Wojciech Wypior (@wojtek0806)
 dependencies:
   ansible.netcommon: ">=2.0.0"
-description: F5 Imperative Collection for Ansible
+description: F5 BIG-IP Imperative Collection for Ansible
 documentation: https://clouddocs.f5.com/products/orchestration/ansible/devel/modules/module_index.html
 homepage: https://clouddocs.f5.com/products/orchestration/ansible/devel/
 issues: https://github.com/F5Networks/f5-ansible/issues
@@ -11,10 +11,10 @@ license:
 name: f5_modules
 namespace: f5networks
 readme: README.md
-repository: https://github.com/F5Networks/f5-ansible
+repository: https://github.com/F5Networks/f5-ansible-f5modules
 tags:
   - f5
   - networking
   - bigip
   - bigiq
-version: 1.20.0
+version: 1.21.0
