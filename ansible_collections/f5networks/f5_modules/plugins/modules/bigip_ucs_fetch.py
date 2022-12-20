@@ -60,16 +60,16 @@ options:
   async_timeout:
     description:
       - Parameter used when creating new UCS file on a device.
-      - The amount of time to wait for the API async interface to complete its task, in seconds.
+      - The number of seconds to wait for the API async interface to complete its task.
       - The accepted value range is between C(150) and C(1800) seconds.
     type: int
     default: 150
   only_create_file:
     description:
-      - If C(yes), the file is created on device and not downloaded. If the UCS archive exists on device,
-        no change is made and file is not be downloaded.
-      - To recreate UCS files left on the device, remove them with C(bigip_ucs) module before running this module with
-        C(only_create_file) set to C(yes).
+      - If C(yes), the file is created on the device and not downloaded. If the UCS archive exists on the device,
+        no change is made and the file is not downloaded.
+      - To recreate UCS files left on the device, remove them with the  C(bigip_ucs) module before running this
+        module with C(only_create_file) set to C(yes).
     type: bool
     default: no
     version_added: "1.12.0"
@@ -139,7 +139,7 @@ checksum:
   type: str
   sample: 7b46bbe4f8ebfee64761b5313855618f64c64109
 dest:
-  description: Location on the ansible host the UCS was saved to.
+  description: Location on the Ansible host the UCS was saved to.
   returned: success
   type: str
   sample: /path/to/file.txt
@@ -196,11 +196,21 @@ import os
 import re
 import tempfile
 import time
-
+import traceback
 from datetime import datetime
-from distutils.version import LooseVersion
 
-from ansible.module_utils.basic import AnsibleModule
+try:
+    from packaging.version import Version
+except ImportError:
+    HAS_PACKAGING = False
+    Version = None
+    PACKAGING_IMPORT_ERROR = traceback.format_exc()
+else:
+    HAS_PACKAGING = True
+
+from ansible.module_utils.basic import (
+    AnsibleModule, missing_required_lib
+)
 
 from ..module_utils.bigip import F5RestClient
 from ..module_utils.common import (
@@ -337,7 +347,7 @@ class ModuleManager(object):
         :return: bool
         """
         version = tmos_version(self.client)
-        if LooseVersion(version) < LooseVersion('12.1.0'):
+        if Version(version) < Version('12.1.0'):
             return True
         else:
             return False
@@ -726,6 +736,12 @@ def main():
         required_if=spec.required_if,
         add_file_common_args=spec.add_file_common_args
     )
+
+    if not HAS_PACKAGING:
+        module.fail_json(
+            msg=missing_required_lib('packaging'),
+            exception=PACKAGING_IMPORT_ERROR
+        )
 
     try:
         mm = ModuleManager(module=module)

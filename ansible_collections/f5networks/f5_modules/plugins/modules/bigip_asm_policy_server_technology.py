@@ -123,12 +123,21 @@ name:
   type: str
   sample: Joomla
 '''
+import traceback
 from datetime import datetime
 
+try:
+    from packaging.version import Version
+except ImportError:
+    HAS_PACKAGING = False
+    Version = None
+    PACKAGING_IMPORT_ERROR = traceback.format_exc()
+else:
+    HAS_PACKAGING = True
+
 from ansible.module_utils.basic import (
-    AnsibleModule, env_fallback
+    AnsibleModule, env_fallback, missing_required_lib
 )
-from distutils.version import LooseVersion
 
 from ..module_utils.bigip import F5RestClient
 from ..module_utils.common import (
@@ -243,7 +252,7 @@ class ModuleManager(object):
 
     def version_is_less_than_13(self):
         version = tmos_version(self.client)
-        if LooseVersion(version) < LooseVersion('13.0.0'):
+        if Version(version) < Version('13.0.0'):
             return True
         else:
             return False
@@ -468,6 +477,12 @@ def main():
         argument_spec=spec.argument_spec,
         supports_check_mode=spec.supports_check_mode,
     )
+
+    if not HAS_PACKAGING:
+        module.fail_json(
+            msg=missing_required_lib('packaging'),
+            exception=PACKAGING_IMPORT_ERROR
+        )
 
     try:
         mm = ModuleManager(module=module)

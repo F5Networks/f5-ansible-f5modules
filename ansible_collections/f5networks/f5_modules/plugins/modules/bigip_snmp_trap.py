@@ -222,11 +222,20 @@ network:
   type: str
   sample: management
 '''
+import traceback
 from datetime import datetime
-from distutils.version import LooseVersion
+
+try:
+    from packaging.version import Version
+except ImportError:
+    HAS_PACKAGING = False
+    Version = None
+    PACKAGING_IMPORT_ERROR = traceback.format_exc()
+else:
+    HAS_PACKAGING = True
 
 from ansible.module_utils.basic import (
-    AnsibleModule, env_fallback
+    AnsibleModule, missing_required_lib, env_fallback
 )
 
 from ..module_utils.bigip import F5RestClient
@@ -415,7 +424,7 @@ class ModuleManager(object):
             bool: True when it is missing. False otherwise.
         """
         version = tmos_version(self.client)
-        if LooseVersion(version) < LooseVersion('12.1.0'):
+        if Version(version) < Version('12.1.0'):
             return True
         else:
             return False
@@ -427,7 +436,7 @@ class ModuleManager(object):
             bool: True when it is missing. False otherwise.
         """
         version = tmos_version(self.client)
-        if LooseVersion(version) < LooseVersion('13.1.0'):
+        if Version(version) < Version('13.1.0'):
             return True
         else:
             return False
@@ -801,6 +810,12 @@ def main():
         supports_check_mode=spec.supports_check_mode,
         required_if=spec.required_if
     )
+
+    if not HAS_PACKAGING:
+        module.fail_json(
+            msg=missing_required_lib('packaging'),
+            exception=PACKAGING_IMPORT_ERROR
+        )
 
     try:
         mm = ModuleManager(module=module)
