@@ -1,3 +1,0 @@
----
-minor_changes:
-    - bigip_monitor_http - add up_interval parameter

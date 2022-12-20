@@ -1,3 +1,0 @@
----
-minor_changes:
-    - bigip_profile_tcp - add keep_alive_interval parameter

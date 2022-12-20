@@ -1,3 +1,0 @@
----
-minor_changes:
-    - bigip_policy_rule - added ASM to disable_target list

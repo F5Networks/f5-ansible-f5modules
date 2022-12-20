@@ -1,3 +1,0 @@
----
-minor_changes:
-    - bigip_device_auth_ldap - added a new parameter referrals
