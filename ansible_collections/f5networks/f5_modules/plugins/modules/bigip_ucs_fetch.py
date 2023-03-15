@@ -207,6 +207,7 @@ except ImportError:
     PACKAGING_IMPORT_ERROR = traceback.format_exc()
 else:
     HAS_PACKAGING = True
+    PACKAGING_IMPORT_ERROR = None
 
 from ansible.module_utils.basic import (
     AnsibleModule, missing_required_lib
@@ -450,7 +451,7 @@ class BaseManager(object):
         self.async_wait(task)
 
     def create_async_task_on_device(self):
-        if self.want.passphrase:
+        if self.want.encryption_password:
             params = dict(
                 command='save',
                 name=self.want.src,
