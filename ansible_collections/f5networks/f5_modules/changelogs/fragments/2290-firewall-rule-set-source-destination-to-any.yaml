@@ -1,3 +1,0 @@
----
-minor_changes:
-  - bigip_firewall_rule - the source and destination items can be set to `any` and port type is changed from int to str

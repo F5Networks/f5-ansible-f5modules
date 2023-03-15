@@ -1,3 +1,0 @@
----
-minor_changes:
-    - bigip_sys_global - added gui_audit parameter to control audit log for changes through webui

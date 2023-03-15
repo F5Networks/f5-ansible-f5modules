@@ -1,3 +1,0 @@
----
-bugfixes:
-  - bigip_ucs_fetch - fix a typo causing a bug that prevented ucs file from being encrypted with the provided passphrase
