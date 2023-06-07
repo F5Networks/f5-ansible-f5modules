@@ -1,3 +1,0 @@
----
-minor_changes:
-  - bigip_command - Added note to give appropriate timeout value for long running commands
