@@ -24,7 +24,7 @@ options:
     required: True
   policy:
     description:
-      - The name of the policy you want to associate this rule with.
+      - The name of the policy with which you want to associate this rule.
     type: str
     required: True
   replace_with:
@@ -42,7 +42,7 @@ options:
       - If there are rules with the same rule order number, the device uses rule names
         to determine how the rules are ordered.
       - The lower the number, the lower the rule is in the general order, with the lowest number C(0) being the
-        topmost one.
+        topmost rule.
       - Valid range of values is between C(0) and C(4294967295) inclusive.
     type: int
     version_added: "1.10.0"
@@ -342,10 +342,10 @@ options:
   conditions:
     description:
       - A list of attributes that describe the condition.
-      - See suboptions for details on how to construct each list entry.
+      - See sub-options for details on how to construct each list entry.
       - The ordering of this list is important, the module ensures the order is
         kept when modifying the task.
-      - The suboption options below are not required for all condition types,
+      - The following sub-options are not required for all condition types,
         read the description for more details.
       - These conditions can be specified in any order. Despite the fact they are in a list,
         the order in the list does not matter to the BIG-IP.
@@ -376,7 +376,7 @@ options:
           - tcp
       path_begins_with_any:
         description:
-          - A list of strings of characters the HTTP URI should start with.
+          - A list of strings of characters with which the HTTP URI should begin.
           - This parameter is only valid with the C(http_uri) type.
         type: list
         elements: str
@@ -415,27 +415,27 @@ options:
         version_added: "1.23.0"
       host_begins_with_any:
         description:
-          - A list of strings of characters the HTTP Host should start with.
+          - A list of strings of characters with which the HTTP Host should begin.
           - This parameter is only valid with the C(http_host) type.
         type: list
         elements: str
       host_begins_not_with_any:
         description:
-          - A list of strings of characters the HTTP Host should not start with.
+          - A list of strings of characters with which the HTTP Host should NOT begin.
           - This parameter is only valid with the C(http_host) type.
         type: list
         elements: str
         version_added: "1.22.0"
       host_ends_not_with_any:
         description:
-          - A list of strings of characters the HTTP Host should not end with.
+          - A list of strings of characters with which the HTTP Host should NOT begin.
           - This parameter is only valid with the C(http_host) type.
         type: list
         elements: str
         version_added: "1.22.0"
       host_ends_with_any:
         description:
-          - A list of strings of characters the HTTP Host should end with.
+          - A list of strings of characters with which the HTTP Host should end.
           - This parameter is only valid with the C(http_host) type.
         type: list
         elements: str
@@ -462,27 +462,69 @@ options:
         version_added: "1.10.0"
       server_name_is_any:
         description:
-          - A list of strings of characters the SSL Extension should match.
+          - A list of names that includes the server name.
           - This parameter is only valid with the C(ssl_extension) type.
         type: list
         elements: str
+      server_name_is_not_any:
+        description:
+          - A list of names that does NOT include the server name.
+          - This parameter is only valid with the C(ssl_extension) type.
+        type: list
+        elements: str
+        version_added: "1.27.0"
+      server_name_begins_with_any:
+        description:
+          - A list of names with which the server name should begin.
+          - This parameter is only valid with the C(ssl_extension) type.
+        type: list
+        elements: str
+        version_added: "1.27.0"
+      server_name_begins_not_with_any:
+        description:
+          - A list of names with which the server name should NOT begin.
+          - This parameter is only valid with the C(ssl_extension) type.
+        type: list
+        elements: str
+        version_added: "1.27.0"
+      server_name_ends_with_any:
+        description:
+          - A list of names with which the server name should end.
+          - This parameter is only valid with the C(ssl_extension) type.
+        type: list
+        elements: str
+        version_added: "1.27.0"
+      server_name_ends_not_with_any:
+        description:
+          - A list of names with which the server name should NOT end.
+          - This parameter is only valid with the C(ssl_extension) type.
+        type: list
+        elements: str
+        version_added: "1.27.0"
+      server_name_contains:
+        description:
+          - A list of names the server name should contain.
+          - This parameter is only valid with the C(ssl_extension) type.
+        type: list
+        elements: str
+        version_added: "1.27.0"
       address_matches_with_any:
         description:
-          - A list of IP Subnet address strings the IP address should match.
+          - A list of IP Subnet address strings that the IP address should match.
           - This parameter is only valid with the C(tcp) type.
         type: list
         elements: str
         version_added: "1.8.0"
       address_matches_with_datagroup:
         description:
-          - A list of internal datagroup strings the IP address should match.
+          - A list of internal data group strings that the IP address should match.
           - This parameter is only valid with the C(tcp) type.
         type: list
         elements: str
         version_added: "1.8.0"
       address_matches_with_external_datagroup:
         description:
-          - A list of external datagroup strings the IP address should match.
+          - A list of external data group strings that the IP address should match.
           - This parameter is only valid with the C(tcp) type.
         type: list
         elements: str
@@ -512,7 +554,7 @@ options:
     default: present
   partition:
     description:
-      - Device partition to manage resources on.
+      - Device partition on which to manage resources.
     type: str
     default: Common
 extends_documentation_fragment: f5networks.f5_modules.f5
@@ -633,7 +675,7 @@ conditions:
       type: str
       sample: http_uri
     path_begins_with_any:
-      description: List of strings the URI begins with.
+      description: List of strings with which the URI begins.
       returned: changed
       type: list
       sample: [foo, bar]
@@ -1161,8 +1203,13 @@ class ModuleParameters(Parameters):
                 action[event] = True
 
     def _handle_ssl_extension_condition(self, action, item):
+        options = [
+            'server_name_is_any', 'server_name_is_not_any', 'server_name_contains',
+            'server_name_begins_with_any', 'server_name_begins_not_with_any',
+            'server_name_ends_with_any', 'server_name_ends_not_with_any',
+        ]
         action['type'] = 'ssl_extension'
-        if 'server_name_is_any' in item:
+        if 'server_name_is_any' in item and item['server_name_is_any'] is not None:
             if isinstance(item['server_name_is_any'], list):
                 values = item['server_name_is_any']
             else:
@@ -1172,6 +1219,69 @@ class ModuleParameters(Parameters):
                 serverName=True,
                 values=values
             ))
+        if 'server_name_is_not_any' in item and item['server_name_is_not_any'] is not None:
+            if isinstance(item['server_name_is_not_any'], list):
+                values = item['server_name_is_not_any']
+            else:
+                values = [item['server_name_is_not_any']]
+            action.update({
+                'equals': True,
+                'serverName': True,
+                'not': True,
+                'values': values
+            })
+        if 'server_name_begins_with_any' in item and item['server_name_begins_with_any'] is not None:
+            if isinstance(item['server_name_begins_with_any'], list):
+                values = item['server_name_begins_with_any']
+            else:
+                values = [item['server_name_begins_with_any']]
+            action.update(dict(
+                serverName=True,
+                startsWith=True,
+                values=values
+            ))
+        if 'server_name_begins_not_with_any' in item and item['server_name_begins_not_with_any'] is not None:
+            if isinstance(item['server_name_begins_not_with_any'], list):
+                values = item['server_name_begins_not_with_any']
+            else:
+                values = [item['server_name_begins_not_with_any']]
+            action.update({
+                'serverName': True,
+                'startsWith': True,
+                'not': True,
+                'values': values
+            })
+        if 'server_name_ends_with_any' in item and item['server_name_ends_with_any'] is not None:
+            if isinstance(item['server_name_ends_with_any'], list):
+                values = item['server_name_ends_with_any']
+            else:
+                values = [item['server_name_ends_with_any']]
+            action.update(dict(
+                serverName=True,
+                endsWith=True,
+                values=values
+            ))
+        if 'server_name_ends_not_with_any' in item and item['server_name_ends_not_with_any'] is not None:
+            if isinstance(item['server_name_ends_not_with_any'], list):
+                values = item['server_name_ends_not_with_any']
+            else:
+                values = [item['server_name_ends_not_with_any']]
+            action.update({
+                'serverName': True,
+                'endsWith': True,
+                'not': True,
+                'values': values
+            })
+        if 'server_name_contains' in item and item['server_name_contains'] is not None:
+            if isinstance(item['server_name_contains'], list):
+                values = item['server_name_contains']
+            else:
+                values = [item['server_name_contains']]
+            action.update({
+                'serverName': True,
+                'contains': True,
+                'values': values
+            })
         if 'event' not in item:
             raise F5ModuleError(
                 "An 'event' must be specified when the 'ssl_extension' condition is used."
@@ -2689,6 +2799,30 @@ class ArgumentSpec(object):
                         elements='str',
                     ),
                     server_name_is_any=dict(
+                        type='list',
+                        elements='str',
+                    ),
+                    server_name_is_not_any=dict(
+                        type='list',
+                        elements='str',
+                    ),
+                    server_name_begins_with_any=dict(
+                        type='list',
+                        elements='str',
+                    ),
+                    server_name_begins_not_with_any=dict(
+                        type='list',
+                        elements='str',
+                    ),
+                    server_name_ends_with_any=dict(
+                        type='list',
+                        elements='str',
+                    ),
+                    server_name_ends_not_with_any=dict(
+                        type='list',
+                        elements='str',
+                    ),
+                    server_name_contains=dict(
                         type='list',
                         elements='str',
                     ),
