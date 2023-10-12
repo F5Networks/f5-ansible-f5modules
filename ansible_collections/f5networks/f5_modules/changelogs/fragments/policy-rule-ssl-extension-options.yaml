@@ -1,3 +1,0 @@
----
-minor_changes:
-  - bigip_policy_rule - added six more options for ssl_extension condition
