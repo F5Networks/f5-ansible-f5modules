@@ -2,6 +2,8 @@ name: Collection Release
 
 on:
   push:
+    branches-ignore:
+      - 'devel'
     tags:
       - '*'
 
