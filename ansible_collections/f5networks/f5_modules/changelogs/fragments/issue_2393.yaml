@@ -1,3 +1,0 @@
----
-minor_changes:
-  - bigip_pool_member - Removed state from the Returnables.
