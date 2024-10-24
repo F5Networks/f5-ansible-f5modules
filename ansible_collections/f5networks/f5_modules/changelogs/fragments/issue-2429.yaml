@@ -1,3 +1,0 @@
----
-minor_changes:
-  - bigip_gtm_server - Added check for datacenter existence in Check Mode.
