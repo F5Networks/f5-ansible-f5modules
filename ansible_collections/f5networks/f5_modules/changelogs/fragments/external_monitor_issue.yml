@@ -1,3 +1,0 @@
----
-bugfixes:
-    - bigip_monitor_external - external monitor user-defined variables not reflected for non-common partition
