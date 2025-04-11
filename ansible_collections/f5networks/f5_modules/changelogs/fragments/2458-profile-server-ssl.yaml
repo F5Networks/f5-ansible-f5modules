@@ -1,2 +1,0 @@
-bugfixes:
-  - bigip_profile_server_ssl to support parent's [None, "", "None"] profiles
