@@ -83,7 +83,7 @@ class TeemClient(object):
                 data=payload
             )
         # we need to ensure that any connection errors to TEEM do not cause failure of module to run.
-        except (HTTPError, URLError, SSLError, RemoteDisconnected):
+        except (HTTPError, URLError, SSLError, RemoteDisconnected, OSError):
             return None
 
         ok = re.search(r'20[01-4]', str(response.code))
