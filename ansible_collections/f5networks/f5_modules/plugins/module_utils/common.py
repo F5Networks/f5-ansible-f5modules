@@ -12,8 +12,8 @@ import re
 import datetime
 
 from ansible.module_utils._text import to_text
-from ansible.module_utils.basic import env_fallback
 from ansible.module_utils.connection import exec_command
+from ansible.module_utils.basic import env_fallback
 from ansible.module_utils.six import iteritems
 from ansible.module_utils.parsing.convert_bool import (
     BOOLEANS_TRUE, BOOLEANS_FALSE
@@ -62,7 +62,7 @@ f5_provider_spec = {
     'timeout': dict(type='int'),
     'no_f5_teem': dict(
         type='bool',
-        default='no',
+        default=False,
         fallback=(env_fallback, ['F5_TEEM', 'F5_TELEMETRY_OFF'])
     ),
     'auth_provider': dict(),
