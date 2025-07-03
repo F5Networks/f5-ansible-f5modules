@@ -1201,6 +1201,18 @@ releases:
   1.37.0:
     changes:
       bugfixes:
+      - added github actions
+    release_date: '2025-07-03'
+  1.36.0:
+    changes:
+      bugfixes:
+      - bigip_virtual_server fix module crash issue
+    fragments:
+    - virtual-server-crash.yaml
+    release_date: '2025-05-22'
+  1.37.0:
+    changes:
+      bugfixes:
       - bigip_virtual_server fix module crash issue
     fragments:
     - virtual-server-crash.yaml
