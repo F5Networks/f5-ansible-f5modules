@@ -1,6 +1,5 @@
 import os
 
-
 def smart_fallback(module, varnames):
     """
     Compatible with Ansible's load_provider() fallback logic.
