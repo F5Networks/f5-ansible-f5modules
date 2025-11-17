@@ -51,7 +51,7 @@ options:
         C(partition_access) is required when creating a new account, and
         should be in the form "partition:role".
       - Valid roles include C(acceleration-policy-editor), C(admin), C(application-editor),
-        C(auditor), C(certificate-manager), C(guest), C(irule-manager), C(manager), C(no-access),
+        C(auditor), C(certificate-manager), C(guest), C(irule-manager), C(log-manager), C(manager), C(no-access),
         C(operator), C(resource-admin), C(user-manager), C(web-application-security-administrator),
         and C(web-application-security-editor).
       - The partition portion the of tuple should be an existing partition or the value 'all'.
