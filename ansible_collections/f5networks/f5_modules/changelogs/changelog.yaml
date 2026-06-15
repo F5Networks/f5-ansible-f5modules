@@ -1229,6 +1229,16 @@ releases:
     fragments:
     - 2515-ssl-key-cert-error-messages.yaml
     release_date: '2026-05-21'
+  1.42.0:
+    changes:
+      bugfixes:
+      - Allow spaces in GTM/DNS object names by encoding them in REST API URI construction
+      - Allow underscores in GTM Wide IP names, which are valid in DNS names and the
+        BIG-IP
+    fragments:
+    - fix-gtm-spaces-in-names.yaml
+    - fix-gtm-wideip-underscore-fqdn.yaml
+    release_date: '2026-06-15'
   1.4.0:
     changes:
       bugfixes:
