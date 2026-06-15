@@ -237,13 +237,17 @@ def is_valid_fqdn(host):
     * If the hyphen is used, it is not permitted to appear at
       either the beginning or end of a label
 
+    Note: As a BIG-IP-specific extension, underscores are also permitted in
+    labels. This deviates from the RFCs above but is necessary for GTM Wide IP
+    names (e.g., SRV records like _sip._tcp.example.com).
+
     :param host:
     :return:
     """
     if len(host) > 255:
         return False
     host = host.rstrip(".")
-    allowed = re.compile(r'(?!-)[A-Z0-9-*]{1,63}(?<!-)$', re.IGNORECASE)
+    allowed = re.compile(r'(?!-)[A-Z0-9_*-]{1,63}(?<!-)$', re.IGNORECASE)
     result = all(allowed.match(x) for x in host.split("."))
     if result:
         parts = host.split('.')
@@ -262,6 +266,7 @@ def transform_name(partition='', name='', sub_path=''):
     if name:
         name = name.replace('/', '~')
         name = name.replace('%', '%25')
+        name = name.replace(' ', '%20')
 
     if partition:
         partition = partition.replace('/', '~')

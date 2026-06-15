@@ -109,11 +109,26 @@ As Red Hat Ansible Certified Content, this collection is entitled to support thr
 
 If a support case cannot be opened with Red Hat and the collection has been obtained either from Galaxy or GitHub, you can report issues on the [GitHub issue tracker](https://github.com/F5Networks/f5-ansible/issues).
 
+Please refer to the [support_policy] for details
+
 ## Release Notes
 
 See the [Changelog](https://clouddocs.f5.com/products/orchestration/ansible/devel/f5_modules/CHANGELOG.html) for release notes
 
+## License Information
+
+Published under [GPL V3](https://www.gnu.org/licenses/gpl-3.0.txt). See the LICENSE file included in the collection for details.
+
+## Contributor License Agreement
+Individuals or business entities who contribute to this project must complete and submit the [F5 Contributor License Agreement](https://clouddocs.f5.com/products/orchestration/ansible/devel/usage/contributor.html) to Ansible_CLA@f5.com prior to their code submission being included in this project.
+
+
+## Copyright
+
+Copyright 2025 F5 Networks Inc.
+
 [F5 Ansible Solutions]: https://clouddocs.f5.com/products/orchestration/ansible/devel/
 [execenv]: https://docs.redhat.com/en/documentation/red_hat_ansible_automation_platform/2.5/html/creating_and_using_execution_environments/index
 [f5execenv]: https://clouddocs.f5.com/products/orchestration/ansible/devel/usage/exec-env.html
-[F5 Networks]: http://www.f5.com
+[F5 Networks]: https://www.f5.com
+[support_policy]: https://f5.com/support/support-policies
