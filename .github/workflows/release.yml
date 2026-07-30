@@ -35,3 +35,11 @@ jobs:
           collection_dir: 'ansible_collections/f5networks/${{ vars.COLNAME }}'
           api_key: "${{ secrets.GALAXY_API_KEY }}"
           build: false
+
+      - name: Publish Collection to Automation Hub
+        uses: artis3n/ansible_galaxy_collection@v2
+        with:
+          collection_dir: 'ansible_collections/f5networks/${{ vars.COLNAME }}'
+          api_key: "${{ secrets.AH_API_KEY }}"
+          server_url: 'https://cloud.redhat.com/api/automation-hub/'
+          build: false
