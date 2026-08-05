@@ -6,7 +6,7 @@ on:
       - '*'
 
 jobs:
-  create_release:
+  github_release:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -29,17 +29,111 @@ jobs:
           omitBody: true
           token: "${{ secrets.GITHUB_TOKEN }}"
 
-      - name: Publish Collection
+      - name: Upload built collection artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: collection-tarball
+          path: "ansible_collections/f5networks/${{ vars.COLNAME }}/f5networks-${{ vars.COLNAME }}-${{ github.ref_name }}.tar.gz"
+          retention-days: 7
+
+  publish_galaxy:
+    needs: github_release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download built collection artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: collection-tarball
+          path: "ansible_collections/f5networks/${{ vars.COLNAME }}"
+
+      - name: Publish Collection to Galaxy
         uses: artis3n/ansible_galaxy_collection@v2
         with:
           collection_dir: 'ansible_collections/f5networks/${{ vars.COLNAME }}'
           api_key: "${{ secrets.GALAXY_API_KEY }}"
           build: false
 
-      - name: Publish Collection to Automation Hub
-        uses: artis3n/ansible_galaxy_collection@v2
+  certify_redhat:
+    needs: publish_galaxy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download built collection artifact
+        uses: actions/download-artifact@v4
         with:
-          collection_dir: 'ansible_collections/f5networks/${{ vars.COLNAME }}'
-          api_key: "${{ secrets.AH_API_KEY }}"
-          server_url: 'https://cloud.redhat.com/api/automation-hub/'
-          build: false
+          name: collection-tarball
+          path: "ansible_collections/f5networks/${{ vars.COLNAME }}"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install ansible-core
+        run: pip install ansible-core==2.16.0
+
+      - name: Publish Collection to Automation Hub
+        run: |
+          set -euo pipefail
+          AH_URL=https://console.redhat.com/api/automation-hub/
+          AH_AUTH_URL=https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token
+          printf '%s\n' \
+            '[galaxy]' \
+            'server_list = automation_hub' \
+            '' \
+            '[galaxy_server.automation_hub]' \
+            "url = $AH_URL" \
+            "auth_url = $AH_AUTH_URL" \
+            "token = ${{ secrets.AH_API_KEY }}" > ansible.cfg
+
+          get_token() {
+            curl -sS -X POST "$AH_AUTH_URL" \
+              -d grant_type=refresh_token \
+              -d client_id="cloud-services" \
+              -d "refresh_token=${{ secrets.AH_API_KEY }}" \
+              --fail | jq -r .access_token
+          }
+          TOKEN=$(get_token)
+          echo "::add-mask::$TOKEN"
+
+          # publish and capture the import URL from output
+          OUTPUT=$(ansible-galaxy collection publish --no-wait -vvvv \
+            "ansible_collections/f5networks/${{ vars.COLNAME }}/f5networks-${{ vars.COLNAME }}-${{ github.ref_name }}.tar.gz")
+          echo "$OUTPUT"
+
+          IMPORT_PATH=$(echo "$OUTPUT" | grep -oP '/api/automation-hub/content/staging/v3/plugin/ansible/imports/collections/[^/]+/' || true)
+          if [ -z "$IMPORT_PATH" ]; then
+            echo "ERROR: could not find import URL in output" >&2
+            exit 1
+          fi
+          IMPORT_URL="https://console.redhat.com${IMPORT_PATH}"
+          echo "Polling import: $IMPORT_URL"
+
+          # poll with token refresh on 401
+          for i in $(seq 1 20); do
+            HTTP=$(curl -sS -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $TOKEN" "$IMPORT_URL")
+
+            if [ "$HTTP" = "401" ]; then
+              echo "Token expired, refreshing..."
+              TOKEN=$(get_token)
+              echo "::add-mask::$TOKEN"
+            fi
+
+            STATUS=$(curl -sS -H "Authorization: Bearer $TOKEN" "$IMPORT_URL")
+            STATE=$(echo "$STATUS" | jq -r .state)
+            echo "Import state: $STATE"
+
+            if [ "$STATE" = "completed" ]; then
+              echo "Import completed successfully"
+              exit 0
+            elif [ "$STATE" = "failed" ]; then
+              echo "Import failed"
+              echo "$STATUS" | jq .
+              exit 1
+            fi
+
+            echo "Waiting 30s..."
+            sleep 30
+          done
+
+          echo "ERROR: import timed out" >&2
+          exit 1
