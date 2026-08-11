@@ -4,6 +4,21 @@ F5Networks F5\_Modules Collection Release Notes
 
 .. contents:: Topics
 
+v1.43.0
+=======
+
+Bugfixes
+--------
+
+- Fix issue in the bigip terminal plugin where long device prompts could be wrapped by the terminal before 'stty cols' widened the pty, causing tmos detection to fail and a malformed stty command to be sent to tmsh.
+- Allow spaces in GTM/DNS object names by encoding them in REST API URI construction
+- Allow underscores in GTM Wide IP names, which are valid in DNS names and the BIG-IP
+
+Minor Changes
+-------------
+
+- bigip_device_info - add ``expand_subcollections`` parameter to toggle the ``expandSubcollections`` API query parameter (default ``true`` preserves existing behavior). When set to ``false``, subcollection data is fetched via individual API calls instead of inline expansion, which can improve performance for large configurations.
+
 v1.42.0
 =======
 
