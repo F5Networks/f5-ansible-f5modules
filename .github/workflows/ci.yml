@@ -23,7 +23,7 @@ jobs:
           sudo apt-get update
           sudo apt-get -y install libffi-dev libssl-dev
           export PYTHONPATH=$PYTHONPATH:$GITHUB_WORKSPACE
-          pip install -r requirements.travis.txt
+          pip install -r ansible_collections/f5networks/f5_modules/requirements.txt
 
       - name: Run Ansible sanity tests
         run: inv test.ansible-test -r -p 3.10
@@ -43,7 +43,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get -y install libffi-dev libssl-dev
-          pip install -r requirements.travis.txt
+          pip install -r ansible_collections/f5networks/f5_modules/requirements.txt
 
       - name: Install pytest
         run: pip install pytest --upgrade
@@ -72,7 +72,7 @@ jobs:
           export PYTHONPATH=$PYTHONPATH:$GITHUB_WORKSPACE
           sudo apt-get update
           sudo apt-get -y install libffi-dev libssl-dev
-          pip install -r requirements.travis.txt
+          pip install -r ansible_collections/f5networks/f5_modules/requirements.txt
 
       - name: Run style and F5 sanity tests
         run: |

@@ -3,3 +3,4 @@ objectpath
 ordereddict
 simplejson
 packaging
+invoke==3.0.3
