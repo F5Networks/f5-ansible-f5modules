@@ -7,7 +7,8 @@ This collection provides imperative Ansible modules and plugins for managing F5 
 ## Requirements
 
 - Ansible >= 2.16
-- Python >= 3.9
+- Python >= 3.10 (control node where Ansible runs)
+- Python >= 3.9 (target node — managed BIG-IP/BIG-IQ devices)
 - packaging (Python library)
 
 
