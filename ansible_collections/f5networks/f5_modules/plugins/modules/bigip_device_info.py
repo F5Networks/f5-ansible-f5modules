@@ -778,6 +778,11 @@ client_ssl_profiles:
       returned: queried
       type: str
       sample: /Common/ca-chain.crt
+    cipher_group:
+      description:
+        - Specifies a cipher group.
+      returned: queried
+      type: str
     ciphers:
       description:
         - Specifies a list of cipher names.
@@ -8738,6 +8743,7 @@ class ClientSslProfilesParameters(BaseParameters):
         'cert': 'certificate_file',
         'key': 'key_file',
         'chain': 'chain_file',
+        'cipherGroup': 'cipher_group',
         'crlFile': 'crl_file',
         'defaultsFrom': 'parent',
         'modSslMethods': 'modssl_methods',
@@ -8776,6 +8782,7 @@ class ClientSslProfilesParameters(BaseParameters):
         'certificate_file',
         'key_file',
         'chain_file',
+        'cipher_group',
         'ciphers',
         'crl_file',
         'parent',
@@ -8945,6 +8952,14 @@ class ClientSslProfilesParameters(BaseParameters):
         if self._values['crl_file'] in [None, 'none']:
             return None
         return self._values['crl_file']
+    
+    @property
+    def cipher_group(self):
+        if self._values['cipher_group'] is None:
+            return None
+        if self._values['cipher_group'] == 'none':
+            return 'none'
+        return self._values['cipher_group']
 
     @property
     def ciphers(self):
