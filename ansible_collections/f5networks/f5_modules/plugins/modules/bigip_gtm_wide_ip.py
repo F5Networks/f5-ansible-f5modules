@@ -140,6 +140,41 @@ options:
         allows one persistence record to be shared by LDNS addresses
         that match within this mask.
     type: int
+  failure_rcode_response:
+    description:
+      - Specifies whether RCODE responses are enabled.
+      - When enabled, specifies that the system returns a RCODE response to Wide IP requests after exhausting all load-balancing methods.
+      - This response is an authoritative empty answer from the system to NAPTR record requests.
+    type: bool
+    default: False
+  failure_rcode:
+    description:
+      - Specifies the DNS RCODE used when "Return Code On Failure" is enabled.
+      - The default is NOERROR (No Error).
+      - If SOA Negative Caching TTL is non-zero, only the Authority section of the NOERROR or NXDOMAIN response will include a SOA record.
+      - `noerror`: Indicates that no type exists at this name.
+      - `formerr`: Indicates that a format error exists in the query.
+      - `servfail`: Indicates that the system is unable to process the query.
+      - `nxdomain`: Indicates that the name does not exist.
+      - `notimpl`: Indicates that there is no support for this kind of query.
+      - `refused`: Indicates that the system refuses to process based on policy
+    type: str
+    choices:
+      - noerror
+      - formerr
+      - servfail
+      - nxdomain
+      - notimpl
+      - refused
+    default: noerror
+  failure_rcode_ttl:
+    description:
+      - Specifies the negative caching TTL of the SOA for the RCODE response.
+      - The default is 0, meaning no SOA is included (i.e. no caching).
+      - Maximum TTL is 604800 (negative cache 1 week max).
+    type: int
+    default: 0
+
 extends_documentation_fragment: f5networks.f5_modules.f5
 author:
   - Tim Rupp (@caphrim007)
@@ -231,6 +266,20 @@ EXAMPLES = r'''
       password: secret
       server: lb.mydomain.com
   delegate_to: localhost
+
+- name: Create IPv6 stub Wide IP with failure RCODE response
+  bigip_gtm_wide_ip:
+    pool_lb_method: round-robin
+    name: my-nonservedwide-ip6.example.com
+    type: aaaa
+    failure_rcode_response: true
+    failure_rcode: noerror
+    failure_rcode_ttl: 3600
+    provider:
+      user: admin
+      password: secret
+      server: lb.mydomain.com
+  delegate_to: localhost
 '''
 
 RETURN = r'''
@@ -274,6 +323,21 @@ persistence_ttl:
   returned: changed
   type: int
   sample: 3600
+failure_rcode_response:
+  description: Specifies whether RCODE responses are enabled.
+  returned: changed
+  type: bool
+  sample: false
+failure_rcode:
+  description: Specifies the DNS RCODE used when failure-rcode-response is enabled.
+  returned: changed
+  type: str
+  sample: noerror
+failure_rcode_ttl:
+  description: Specifies the negative caching TTL of the SOA for the RCODE response.
+  returned: changed
+  type: int
+  sample: 0
 '''
 from datetime import datetime
 
@@ -300,6 +364,9 @@ class Parameters(AnsibleF5Parameters):
         'persistCidrIpv4': 'persist_cidr_ipv4',
         'persistCidrIpv6': 'persist_cidr_ipv6',
         'ttlPersistence': 'persistence_ttl',
+        'failureRcodeResponse': 'failure_rcode_response',
+        'failureRcode': 'failure_rcode',
+        'failureRcodeTtl': 'failure_rcode_ttl',
     }
 
     updatables = [
@@ -315,6 +382,9 @@ class Parameters(AnsibleF5Parameters):
         'persist_cidr_ipv6',
         'persistence',
         'persistence_ttl',
+        'failure_rcode_response',
+        'failure_rcode',
+        'failure_rcode_ttl',
     ]
 
     returnables = [
@@ -329,6 +399,9 @@ class Parameters(AnsibleF5Parameters):
         'persist_cidr_ipv4',
         'persist_cidr_ipv6',
         'persistence_ttl',
+        'failure_rcode_response',
+        'failure_rcode',
+        'failure_rcode_ttl',
     ]
 
     api_attributes = [
@@ -343,6 +416,9 @@ class Parameters(AnsibleF5Parameters):
         'ttlPersistence',
         'persistCidrIpv4',
         'persistCidrIpv6',
+        'failureRcodeResponse',
+        'failureRcode',
+        'failureRcodeTtl',
     ]
 
 
@@ -526,6 +602,37 @@ class ModuleParameters(Parameters):
             return self._values['persist_cidr_ipv6']
         raise F5ModuleError(
             "Valid 'persist_cidr_ipv6' must be in range 0 - 4294967295."
+        )
+
+    @property
+    def failure_rcode_response(self):
+        if self._values['failure_rcode_response'] is None:
+            return None
+        result = flatten_boolean(self._values['failure_rcode_response'])
+        if result is None:
+            return None
+        if result == 'yes':
+            return 'enabled'
+        return 'disabled'
+
+    @property
+    def failure_rcode(self):
+        if self._values['failure_rcode'] is None:
+            return None
+        elif self._values['failure_rcode'] in ['noerror', 'formerr', 'servfail', 'nxdomain', 'notimpl', 'refused']:
+            return str(self._values['failure_rcode'])
+        raise F5ModuleError(
+            "Valid 'failure_rcode' must be one of: 'noerror', 'formerr', 'servfail', 'nxdomain', 'notimpl', 'refused'"
+        )
+
+    @property
+    def failure_rcode_ttl(self):
+        if self._values['failure_rcode_ttl'] is None:
+            return None
+        if 0 <= self._values['failure_rcode_ttl'] <= 604800:
+            return self._values['failure_rcode_ttl']
+        raise F5ModuleError(
+            "Valid 'failure_rcode_ttl' must be in range 0 - 604800 (negative cache 1 week max)."
         )
 
 
@@ -873,6 +980,9 @@ class ArgumentSpec(object):
         lb_method_choices = [
             'round-robin', 'topology', 'ratio', 'global-availability',
         ]
+        failure_rcode_choices = [
+            'noerror', 'formerr', 'servfail', 'nxdomain', 'notimpl', 'refused',
+        ]
         self.supports_check_mode = True
         argument_spec = dict(
             pool_lb_method=dict(
@@ -919,6 +1029,18 @@ class ArgumentSpec(object):
             persistence_ttl=dict(type='int'),
             persist_cidr_ipv4=dict(type='int'),
             persist_cidr_ipv6=dict(type='int'),
+            failure_rcode_response=dict(
+                default=False,
+                type='bool',
+                ),
+            failure_rcode=dict(
+                default='noerror',
+                choices=failure_rcode_choices
+            ),
+            failure_rcode_ttl=dict(
+                default = 0,
+                type='int'
+            ),
         )
         self.argument_spec = {}
         self.argument_spec.update(f5_argument_spec)
