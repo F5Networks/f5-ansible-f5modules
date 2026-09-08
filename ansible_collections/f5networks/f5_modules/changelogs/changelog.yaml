@@ -1239,6 +1239,25 @@ releases:
     - fix-gtm-spaces-in-names.yaml
     - fix-gtm-wideip-underscore-fqdn.yaml
     release_date: '2026-06-15'
+  1.44.0:
+    changes:
+      bugfixes:
+      - Fix issue in the bigip terminal plugin where long device prompts could be wrapped
+        by the terminal before 'stty cols' widened the pty, causing tmos detection to
+        fail and a malformed stty command to be sent to tmsh.
+      - Allow spaces in GTM/DNS object names by encoding them in REST API URI construction
+      - Allow underscores in GTM Wide IP names, which are valid in DNS names and the BIG-IP
+      minor_changes:
+      - bigip_device_info - add ``expand_subcollections`` parameter to toggle the ``expandSubcollections``
+        API query parameter (default ``true`` preserves existing behavior). When set to
+        ``false``, subcollection data is fetched via individual API calls instead of inline
+        expansion, which can improve performance for large configurations.
+    fragments:
+    - feat-bigip-device-info-expand-subcollections.yaml
+    - fix-bigip-terminal-plugin-tmos-prompt-wrap.yaml
+    - fix-gtm-spaces-in-names.yaml
+    - fix-gtm-wideip-underscore-fqdn.yaml
+    release_date: '2026-09-08'
   1.43.0:
     changes:
       bugfixes:
