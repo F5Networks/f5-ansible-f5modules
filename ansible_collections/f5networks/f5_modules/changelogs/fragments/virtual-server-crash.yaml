@@ -1,0 +1,2 @@
+bugfixes:
+  - bigip_virtual_server fix module crash issue
