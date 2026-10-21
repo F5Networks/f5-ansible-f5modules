@@ -4,6 +4,15 @@ F5Networks F5\_Modules Collection Release Notes
 
 .. contents:: Topics
 
+v1.45.0
+=======
+
+Bugfixes
+--------
+
+- bigip terminal plugin - Strip whitespace along with CR/LF from long device prompts that the terminal wraps, and detect device prompts that contain several parenthesized segments, so tmos shell detection succeeds.
+- icontrol module utils - Fix file upload size and encoding for in-memory ``StringIO`` content, so non-ASCII content is uploaded as UTF-8 bytes with the correct byte length.
+
 v1.44.0
 =======
 
