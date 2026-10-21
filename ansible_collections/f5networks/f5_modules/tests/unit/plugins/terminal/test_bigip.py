@@ -81,6 +81,22 @@ class TestOnOpenShell:
             b'run /util bash -c "stty cols 1000000" 2> /dev/null',
         ]
 
+    def test_tmos_prompt_wrapped_with_embedded_space_and_cr(self):
+        # Line wrap at column 80 inside tmos inserting space and \r
+        prompt = (
+            b'svc_mrchntsc_ntwkaut@(ukdc2b)(pid-6604)(cfg-sync Standalone)'
+            b'(Active)(/Common)(tm \ros)# '
+        )
+        terminal = _make_terminal(prompt)
+
+        terminal.on_open_shell()
+
+        calls = [c.args[0] for c in terminal._exec_cli_command.call_args_list]
+        assert calls == [
+            b'modify cli preference display-threshold 0 pager disabled',
+            b'run /util bash -c "stty cols 1000000" 2> /dev/null',
+        ]
+
     def test_non_tmos_shell_prompt(self):
         prompt = b'[root@bigip1:Active:In Sync] ~ #'
         terminal = _make_terminal(prompt)
@@ -117,3 +133,42 @@ class TestOnOpenShell:
             b'stty cols 1000000 2> /dev/null',
             b'tmsh modify cli preference display-threshold 0 pager disabled',
         ]
+
+    def test_tmos_prompt_many_parentheses_and_newline_hash(self):
+        prompt = (
+            b'svc_mrchntsc_ntwkaut(admin)@(ukdc2b.n.ext.slb01)(avc 0)(mcp )'
+            b'(cfg-load )(cfg-sync Standalone)(Active)(/Common)(tmos)\r\n# '
+        )
+        terminal = _make_terminal(prompt)
+
+        terminal.on_open_shell()
+
+        calls = [c.args[0] for c in terminal._exec_cli_command.call_args_list]
+        assert calls == [
+            b'modify cli preference display-threshold 0 pager disabled',
+            b'run /util bash -c "stty cols 1000000" 2> /dev/null',
+        ]
+
+
+class TestTerminalStdoutRegex:
+    def test_multi_parentheses_wrapped_prompt_matches_tmos_pattern(self):
+        prompt = (
+            b'svc_mrchntsc_ntwkaut(admin)@(ukdc2b.n.ext.slb01)(avc 0)(mcp )'
+            b'(cfg-load )(cfg-sync Standalone)(Active)(/Common)(tmos)\r\n# '
+        )
+        pattern = TerminalModule.terminal_stdout_re[0]
+        match = pattern.search(prompt)
+        assert match is not None
+        assert b'tmos' in match.group(0)
+
+    def test_bare_newline_hash_does_not_match_first_pattern(self):
+        pattern = TerminalModule.terminal_stdout_re[0]
+        assert pattern.search(b'\r\n# ') is None
+        assert pattern.search(b'\n# ') is None
+
+    def test_standard_tmos_prompt_matches_first_pattern(self):
+        prompt = b'admin@(bigip1)(Active)(/Common)(tmos)#'
+        pattern = TerminalModule.terminal_stdout_re[0]
+        match = pattern.search(prompt)
+        assert match is not None
+        assert b'tmos' in match.group(0)
